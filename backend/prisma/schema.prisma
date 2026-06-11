@@ -1,0 +1,415 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  CRAFTSMAN
+  OWNER
+  ADMIN
+}
+
+enum AccountStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  BANNED
+}
+
+enum PropertyType {
+  APARTMENT
+  HOUSE
+  STUDIO
+  VILLA
+  COMMERCIAL
+}
+
+enum ListingStatus {
+  DRAFT
+  ACTIVE
+  RENTED
+  SOLD
+  ARCHIVED
+}
+
+enum CraftsmanStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  SUSPENDED
+}
+
+enum MessageStatus {
+  SENT
+  DELIVERED
+  READ
+}
+
+enum NotificationType {
+  MESSAGE
+  REVIEW
+  LISTING_APPROVED
+  LISTING_REJECTED
+  CRAFTSMAN_VERIFIED
+  REPORT_RESOLVED
+  SYSTEM
+}
+
+enum ReportType {
+  USER
+  LISTING
+  CRAFTSMAN
+  MESSAGE
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  RESOLVED
+  DISMISSED
+}
+
+enum WilayaCode {
+  W01 W02 W03 W04 W05 W06 W07 W08 W09 W10
+  W11 W12 W13 W14 W15 W16 W17 W18 W19 W20
+  W21 W22 W23 W24 W25 W26 W27 W28 W29 W30
+  W31 W32 W33 W34 W35 W36 W37 W38 W39 W40
+  W41 W42 W43 W44 W45 W46 W47 W48 W49 W50
+  W51 W52 W53 W54 W55 W56 W57 W58
+}
+
+model User {
+  id            String        @id @default(cuid())
+  email         String        @unique
+  phone         String?       @unique
+  passwordHash  String
+  firstName     String
+  lastName      String
+  avatarUrl     String?
+  role          Role          @default(USER)
+  status        AccountStatus @default(PENDING)
+  isEmailVerified Boolean     @default(false)
+  isPhoneVerified Boolean     @default(false)
+  fcmToken      String?
+  refreshToken  String?
+  lastSeenAt    DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  craftsman     Craftsman?
+  listings      PropertyListing[]
+  sentMessages     Message[]    @relation("SentMessages")
+  receivedMessages Message[]   @relation("ReceivedMessages")
+  rooms            ChatRoom[]   @relation("ChatRoomMembers")
+  favorites        Favorite[]
+  reviewsGiven     Review[]     @relation("ReviewsGiven")
+  reviewsReceived  Review[]     @relation("ReviewsReceived")
+  notifications    Notification[]
+  reports          Report[]     @relation("ReportedBy")
+  reportedItems    Report[]     @relation("ReportedUser")
+  emailVerifications EmailVerification[]
+  passwordResets   PasswordReset[]
+  sessions         UserSession[]
+
+  @@map("users")
+}
+
+model UserSession {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshToken String   @unique
+  deviceInfo   Json?
+  ipAddress    String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  @@map("user_sessions")
+}
+
+model EmailVerification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@map("email_verifications")
+}
+
+model PasswordReset {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@map("password_resets")
+}
+
+model Specialty {
+  id          String      @id @default(cuid())
+  nameAr      String
+  nameFr      String
+  nameEn      String
+  icon        String?
+  isActive    Boolean     @default(true)
+  craftsmen   Craftsman[]
+  createdAt   DateTime    @default(now())
+
+  @@map("specialties")
+}
+
+model Craftsman {
+  id              String          @id @default(cuid())
+  userId          String          @unique
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  specialtyId     String
+  specialty       Specialty       @relation(fields: [specialtyId], references: [id])
+  bio             String?
+  yearsExperience Int             @default(0)
+  wilaya          WilayaCode
+  city            String
+  address         String?
+  whatsappNumber  String?
+  businessPhone   String?
+  businessName    String?
+  status          CraftsmanStatus @default(PENDING)
+  isAvailable     Boolean         @default(true)
+  avgRating       Float           @default(0)
+  totalReviews    Int             @default(0)
+  totalJobs       Int             @default(0)
+  verifiedAt      DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  portfolio       PortfolioItem[]
+  reviews         Review[]        @relation("CraftsmanReviews")
+
+  @@index([wilaya, specialtyId])
+  @@index([status, isAvailable])
+  @@map("craftsmen")
+}
+
+model PortfolioItem {
+  id           String    @id @default(cuid())
+  craftsmanId  String
+  craftsman    Craftsman @relation(fields: [craftsmanId], references: [id], onDelete: Cascade)
+  title        String
+  description  String?
+  imageUrl     String
+  publicId     String
+  order        Int       @default(0)
+  createdAt    DateTime  @default(now())
+
+  @@map("portfolio_items")
+}
+
+model PropertyListing {
+  id            String        @id @default(cuid())
+  ownerId       String
+  owner         User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  title         String
+  description   String
+  type          PropertyType
+  status        ListingStatus @default(DRAFT)
+  price         Decimal       @db.Decimal(10, 2)
+  pricePeriod   String        @default("monthly")
+  wilaya        WilayaCode
+  city          String
+  address       String?
+  latitude      Float?
+  longitude     Float?
+  rooms         Int
+  bathrooms     Int           @default(1)
+  area          Float?
+  floor         Int?
+  totalFloors   Int?
+  hasParking    Boolean       @default(false)
+  hasElevator   Boolean       @default(false)
+  hasBalcony    Boolean       @default(false)
+  isFurnished   Boolean       @default(false)
+  isAvailable   Boolean       @default(true)
+  viewCount     Int           @default(0)
+  avgRating     Float         @default(0)
+  totalReviews  Int           @default(0)
+  publishedAt   DateTime?
+  expiresAt     DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  images        ListingImage[]
+  favorites     Favorite[]
+  reviews       Review[]      @relation("ListingReviews")
+  chatRooms     ChatRoom[]
+
+  @@index([wilaya, type, status])
+  @@index([status, isAvailable])
+  @@map("property_listings")
+}
+
+model ListingImage {
+  id          String          @id @default(cuid())
+  listingId   String
+  listing     PropertyListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  url         String
+  publicId    String
+  isCover     Boolean         @default(false)
+  order       Int             @default(0)
+  createdAt   DateTime        @default(now())
+
+  @@map("listing_images")
+}
+
+model Favorite {
+  id          String           @id @default(cuid())
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listingId   String?
+  listing     PropertyListing? @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  craftsmanId String?
+  createdAt   DateTime         @default(now())
+
+  @@unique([userId, listingId])
+  @@unique([userId, craftsmanId])
+  @@map("favorites")
+}
+
+model Review {
+  id           String           @id @default(cuid())
+  reviewerId   String
+  reviewer     User             @relation("ReviewsGiven", fields: [reviewerId], references: [id], onDelete: Cascade)
+  revieweeId   String?
+  reviewee     User?            @relation("ReviewsReceived", fields: [revieweeId], references: [id], onDelete: Cascade)
+  craftsmanId  String?
+  craftsman    Craftsman?       @relation("CraftsmanReviews", fields: [craftsmanId], references: [id], onDelete: Cascade)
+  listingId    String?
+  listing      PropertyListing? @relation("ListingReviews", fields: [listingId], references: [id], onDelete: Cascade)
+  rating       Int
+  comment      String?
+  isVerified   Boolean          @default(false)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([craftsmanId, rating])
+  @@index([listingId, rating])
+  @@map("reviews")
+}
+
+model ChatRoom {
+  id          String           @id @default(cuid())
+  listingId   String?
+  listing     PropertyListing? @relation(fields: [listingId], references: [id], onDelete: SetNull)
+  isGroup     Boolean          @default(false)
+  lastMessage String?
+  lastMessageAt DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  members     User[]           @relation("ChatRoomMembers")
+  messages    Message[]
+
+  @@map("chat_rooms")
+}
+
+model Message {
+  id          String        @id @default(cuid())
+  roomId      String
+  room        ChatRoom      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  senderId    String
+  sender      User          @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId  String?
+  receiver    User?         @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  content     String
+  mediaUrl    String?
+  status      MessageStatus @default(SENT)
+  readAt      DateTime?
+  deletedAt   DateTime?
+  createdAt   DateTime      @default(now())
+
+  @@index([roomId, createdAt])
+  @@map("messages")
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        NotificationType
+  title       String
+  body        String
+  data        Json?
+  isRead      Boolean          @default(false)
+  readAt      DateTime?
+  createdAt   DateTime         @default(now())
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+model Report {
+  id           String       @id @default(cuid())
+  reportedById String
+  reportedBy   User         @relation("ReportedBy", fields: [reportedById], references: [id], onDelete: Cascade)
+  reportedUserId String?
+  reportedUser  User?       @relation("ReportedUser", fields: [reportedUserId], references: [id], onDelete: SetNull)
+  targetId     String
+  type         ReportType
+  reason       String
+  description  String?
+  status       ReportStatus @default(PENDING)
+  adminNote    String?
+  resolvedAt   DateTime?
+  createdAt    DateTime     @default(now())
+
+  @@map("reports")
+}
+
+model Wilaya {
+  id        Int    @id
+  code      String @unique
+  nameAr    String
+  nameFr    String
+  cities    City[]
+
+  @@map("wilayas")
+}
+
+model City {
+  id       Int    @id @default(autoincrement())
+  nameAr   String
+  nameFr   String
+  wilayaId Int
+  wilaya   Wilaya @relation(fields: [wilayaId], references: [id])
+
+  @@map("cities")
+}
+
+model AdminLog {
+  id         String   @id @default(cuid())
+  adminId    String
+  action     String
+  targetType String
+  targetId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@map("admin_logs")
+}
+
+model AppConfig {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("app_config")
+}
