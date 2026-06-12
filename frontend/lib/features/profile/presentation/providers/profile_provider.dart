@@ -2,8 +2,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:dio/dio.dart';
 
 import '../../../../core/config/app_config.dart';
-import '../../../auth/domain/entities/user.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../craftsmen/domain/entities/craftsman.dart';
 import '../../../listings/domain/entities/listing.dart';
 
@@ -77,12 +75,11 @@ class ProfileState {
 // ---------------------------------------------------------------------------
 
 class ProfileNotifier extends StateNotifier<ProfileState> {
-  ProfileNotifier(this._dio, this._ref) : super(const ProfileState()) {
+  ProfileNotifier(this._dio) : super(const ProfileState()) {
     _init();
   }
 
   final Dio _dio;
-  final Ref _ref;
 
   Future<void> _init() async {
     await Future.wait([
@@ -240,5 +237,5 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
 
 final profileNotifierProvider =
     StateNotifierProvider<ProfileNotifier, ProfileState>((ref) {
-  return ProfileNotifier(ref.watch(_profileDioProvider), ref);
+  return ProfileNotifier(ref.watch(_profileDioProvider));
 });

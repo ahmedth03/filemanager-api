@@ -78,7 +78,7 @@ class ProfileScreen extends ConsumerWidget {
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                     horizontal: 16, vertical: 8),
-                child: _LogoutButton(ref: ref, context: context),
+                child: const _LogoutButton(),
               ),
             ),
 
@@ -581,14 +581,11 @@ class _MenuItem extends StatelessWidget {
 // Logout button
 // ---------------------------------------------------------------------------
 
-class _LogoutButton extends StatelessWidget {
-  const _LogoutButton({required this.ref, required this.context});
-
-  final WidgetRef ref;
-  final BuildContext context;
+class _LogoutButton extends ConsumerWidget {
+  const _LogoutButton();
 
   @override
-  Widget build(BuildContext _) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
