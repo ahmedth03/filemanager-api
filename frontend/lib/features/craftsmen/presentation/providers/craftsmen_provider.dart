@@ -59,14 +59,14 @@ class CraftsmenNotifier extends StateNotifier<CraftsmenState> {
         ..._currentFilters,
       });
       final data = response.data['data'];
-      final craftsmenList = data['craftsmen'] as List<dynamic>? ?? [];
+      final list = (data['craftsmen'] as List<dynamic>?) ?? [];
       final total = (data['total'] as int?) ?? 0;
       state = state.copyWith(
-        craftsmen: craftsmenList,
+        craftsmen: list,
         total: total,
         page: 1,
         isLoading: false,
-        hasMore: craftsmenList.length < total,
+        hasMore: list.length < total,
       );
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
@@ -85,7 +85,7 @@ class CraftsmenNotifier extends StateNotifier<CraftsmenState> {
         ..._currentFilters,
       });
       final data = response.data['data'];
-      final newItems = data['craftsmen'] as List<dynamic>? ?? [];
+      final newItems = (data['craftsmen'] as List<dynamic>?) ?? [];
       final combined = [...state.craftsmen, ...newItems];
       final total = (data['total'] as int?) ?? state.total;
       state = state.copyWith(
@@ -93,6 +93,7 @@ class CraftsmenNotifier extends StateNotifier<CraftsmenState> {
         page: nextPage,
         isLoadingMore: false,
         hasMore: combined.length < total,
+        total: total,
       );
     } catch (e) {
       state = state.copyWith(isLoadingMore: false, error: e.toString());
@@ -114,12 +115,12 @@ final craftsmanDetailProvider =
     FutureProvider.family<Map<String, dynamic>, String>((ref, id) async {
   final dio = ref.read(dioProvider);
   final response = await dio.get('/v1/craftsmen/$id');
-  return response.data['data'] as Map<String, dynamic>;
+  return Map<String, dynamic>.from(response.data['data'] as Map);
 });
 
 final craftsmanReviewsProvider =
     FutureProvider.family<List<dynamic>, String>((ref, id) async {
   final dio = ref.read(dioProvider);
   final response = await dio.get('/v1/craftsmen/$id/reviews');
-  return response.data['data']['reviews'] as List<dynamic>? ?? [];
+  return (response.data['data']['reviews'] as List<dynamic>?) ?? [];
 });
