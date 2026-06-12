@@ -12,28 +12,28 @@ dependencies:
   flutter_localizations:
     sdk: flutter
 
-  # State Management
+  # ── State Management ──────────────────────────────────────────────────────
   flutter_riverpod: ^2.4.9
   hooks_riverpod: ^2.4.9
   flutter_hooks: ^0.20.3
   riverpod_annotation: ^2.3.3
 
-  # Navigation
+  # ── Navigation ────────────────────────────────────────────────────────────
   go_router: ^13.0.1
 
-  # Network
+  # ── Network ───────────────────────────────────────────────────────────────
   dio: ^5.4.0
   retrofit: ^4.1.0
 
-  # Local Storage
+  # ── Local Storage ─────────────────────────────────────────────────────────
   shared_preferences: ^2.2.2
   flutter_secure_storage: ^9.0.0
 
-  # Serialization
+  # ── Serialization ─────────────────────────────────────────────────────────
   freezed_annotation: ^2.4.1
   json_annotation: ^4.8.1
 
-  # UI Components
+  # ── UI Components ─────────────────────────────────────────────────────────
   cached_network_image: ^3.3.1
   image_picker: ^1.0.7
   photo_view: ^0.14.0
@@ -46,24 +46,24 @@ dependencies:
   smooth_page_indicator: ^1.1.0
   carousel_slider: ^4.2.1
 
-  # Maps
+  # ── Maps ──────────────────────────────────────────────────────────────────
   flutter_map: ^6.1.0
   latlong2: ^0.9.0
 
-  # Chat & Real-time
+  # ── Chat & Real-time ──────────────────────────────────────────────────────
   socket_io_client: ^2.0.3+1
 
-  # Notifications
+  # ── Notifications ─────────────────────────────────────────────────────────
   firebase_core: ^2.24.2
   firebase_messaging: ^14.7.10
   flutter_local_notifications: ^16.3.0
 
-  # Image & File
+  # ── Image & File ──────────────────────────────────────────────────────────
   image_cropper: ^5.0.1
   file_picker: ^6.1.1
   path_provider: ^2.1.2
 
-  # Utils
+  # ── Utils ─────────────────────────────────────────────────────────────────
   intl: ^0.19.0
   url_launcher: ^6.2.4
   permission_handler: ^11.2.0

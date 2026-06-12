@@ -162,7 +162,7 @@ class _ListingCard extends StatelessWidget {
                   ),
                   child: listing.images.isNotEmpty
                       ? Image.network(
-                          listing.images.first.url,
+                          listing.images.first.imageUrl,
                           height: 120,
                           width: double.infinity,
                           fit: BoxFit.cover,
@@ -311,7 +311,7 @@ class _ListingCard extends StatelessWidget {
         color = AppColors.accent;
         break;
       case ListingType.studio:
-        icon = Icons.studio;
+        icon = Icons.meeting_room_outlined;
         color = AppColors.info;
         break;
       case ListingType.shop:

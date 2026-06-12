@@ -70,4 +70,5 @@ class RouteNames {
   static const String pathWriteReview = '/write-review';
   static const String pathCraftsmanProfileSetup = '/craftsman-profile-setup';
   static const String pathMyListings = '/my-listings';
+  static const String pathEditProfile = '/edit-profile';
 }

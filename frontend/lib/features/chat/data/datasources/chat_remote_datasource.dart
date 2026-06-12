@@ -24,6 +24,7 @@ abstract interface class ChatRemoteDatasource {
   Future<Message> sendMessage(String roomId, String content, MessageType type);
   Future<void> markAsRead(String roomId);
   Future<ChatRoom> createChatRoom(String otherUserId);
+  Future<void> deleteMessage(String roomId, String messageId);
 }
 
 // ---------------------------------------------------------------------------
@@ -83,5 +84,10 @@ class ChatRemoteDatasourceImpl implements ChatRemoteDatasource {
     );
     final data = response.data['data'] ?? response.data;
     return ChatRoom.fromJson(data as Map<String, dynamic>);
+  }
+
+  @override
+  Future<void> deleteMessage(String roomId, String messageId) async {
+    await _dio.delete('/chat/rooms/$roomId/messages/$messageId');
   }
 }

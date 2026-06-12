@@ -22,8 +22,16 @@ class ChatRepositoryImpl implements ChatRepository {
 
   final ChatRemoteDatasource _datasource;
 
+  // ── Rooms ─────────────────────────────────────────────────────────────────
+
   @override
   Future<List<ChatRoom>> getChatRooms() => _datasource.getChatRooms();
+
+  @override
+  Future<ChatRoom> createOrGetRoom(String otherUserId) =>
+      _datasource.createChatRoom(otherUserId);
+
+  // ── Messages ──────────────────────────────────────────────────────────────
 
   @override
   Future<List<Message>> getMessages(
@@ -45,13 +53,6 @@ class ChatRepositoryImpl implements ChatRepository {
   Future<void> markAsRead(String roomId) => _datasource.markAsRead(roomId);
 
   @override
-  Future<ChatRoom> createOrGetRoom(String otherUserId) =>
-      _datasource.createChatRoom(otherUserId);
-
-  @override
-  Future<void> deleteMessage(String roomId, String messageId) async {
-    // Implemented when backend supports DELETE /chat/rooms/:roomId/messages/:messageId
-    // Noop placeholder that won't throw, datasource can be extended.
-    await Future<void>.value();
-  }
+  Future<void> deleteMessage(String roomId, String messageId) =>
+      _datasource.deleteMessage(roomId, messageId);
 }
