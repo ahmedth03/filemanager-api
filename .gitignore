@@ -3,3 +3,6 @@ backend/node_modules/
 frontend/.dart_tool/
 frontend/build/
 .env
+.env.*
+backend/.env
+backend/.env.*
