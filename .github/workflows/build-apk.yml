@@ -31,9 +31,9 @@ jobs:
         working-directory: frontend
         run: flutter pub get
 
-      - name: Run code generation
+      - name: Generate localizations
         working-directory: frontend
-        run: dart run build_runner build --delete-conflicting-outputs
+        run: flutter gen-l10n
 
       - name: Build debug APK
         working-directory: frontend
