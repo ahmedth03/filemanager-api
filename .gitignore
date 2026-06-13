@@ -6,3 +6,6 @@ frontend/build/
 .env.*
 backend/.env
 backend/.env.*
+dump.rdb
+*.rdb
+appendonly.aof
