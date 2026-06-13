@@ -32,6 +32,12 @@ export default () => ({
   fcm: {
     serverKey: process.env.FCM_SERVER_KEY,
   },
+  firebase: {
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    serviceAccountPath: process.env.FIREBASE_SERVICE_ACCOUNT_PATH,
+  },
   throttle: {
     ttl: parseInt(process.env.THROTTLE_TTL, 10) || 60,
     limit: parseInt(process.env.THROTTLE_LIMIT, 10) || 100,

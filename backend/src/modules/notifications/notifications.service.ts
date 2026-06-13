@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { NotificationType } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
+import { FirebaseService } from '../../shared/firebase/firebase.service';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 
 export interface CreateNotificationInput {
@@ -13,10 +14,13 @@ export interface CreateNotificationInput {
 
 @Injectable()
 export class NotificationsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private firebaseService: FirebaseService,
+  ) {}
 
   async create(input: CreateNotificationInput) {
-    return this.prisma.notification.create({
+    const notification = await this.prisma.notification.create({
       data: {
         userId: input.userId,
         type: input.type,
@@ -25,6 +29,28 @@ export class NotificationsService {
         data: input.data ?? {},
       },
     });
+
+    // Fire-and-forget push notification — failure is handled inside pushToUser
+    this.pushToUser(input.userId, input.title, input.body).catch(() => {
+      // Already logged inside pushToUser
+    });
+
+    return notification;
+  }
+
+  private async pushToUser(
+    userId: string,
+    title: string,
+    body: string,
+    data?: Record<string, string>,
+  ): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { fcmToken: true },
+    });
+    if (user?.fcmToken) {
+      await this.firebaseService.sendPushNotification(user.fcmToken, title, body, data);
+    }
   }
 
   async createMany(inputs: CreateNotificationInput[]) {

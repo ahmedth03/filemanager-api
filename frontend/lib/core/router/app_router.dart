@@ -5,22 +5,46 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../storage/secure_storage.dart';
 import 'route_names.dart';
 
-// ---------------------------------------------------------------------------
-// Placeholder screens — replace with real screen imports once features exist
-// ---------------------------------------------------------------------------
+// ── Auth screens ─────────────────────────────────────────────────────────────
+import 'package:harfidar/features/auth/presentation/screens/splash_screen.dart';
+import 'package:harfidar/features/auth/presentation/screens/onboarding_screen.dart';
+import 'package:harfidar/features/auth/presentation/screens/login_screen.dart';
+import 'package:harfidar/features/auth/presentation/screens/register_screen.dart';
+import 'package:harfidar/features/auth/presentation/screens/forgot_password_screen.dart';
+import 'package:harfidar/features/auth/presentation/screens/reset_password_screen.dart';
 
-class _PlaceholderScreen extends StatelessWidget {
-  const _PlaceholderScreen({required this.title});
-  final String title;
+// ── Home ─────────────────────────────────────────────────────────────────────
+import 'package:harfidar/features/home/presentation/screens/home_screen.dart';
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: Center(child: Text(title, style: const TextStyle(fontSize: 20))),
-    );
-  }
-}
+// ── Craftsmen ────────────────────────────────────────────────────────────────
+import 'package:harfidar/features/craftsmen/presentation/screens/craftsmen_list_screen.dart';
+import 'package:harfidar/features/craftsmen/presentation/screens/craftsman_detail_screen.dart';
+import 'package:harfidar/features/craftsmen/presentation/screens/craftsman_profile_setup_screen.dart';
+
+// ── Listings ─────────────────────────────────────────────────────────────────
+import 'package:harfidar/features/listings/presentation/screens/listings_list_screen.dart';
+import 'package:harfidar/features/listings/presentation/screens/listing_detail_screen.dart';
+import 'package:harfidar/features/listings/presentation/screens/create_listing_screen.dart';
+import 'package:harfidar/features/listings/presentation/screens/my_listings_screen.dart';
+
+// ── Chat ─────────────────────────────────────────────────────────────────────
+import 'package:harfidar/features/chat/presentation/screens/chat_list_screen.dart';
+import 'package:harfidar/features/chat/presentation/screens/chat_room_screen.dart';
+
+// ── Profile ──────────────────────────────────────────────────────────────────
+import 'package:harfidar/features/profile/presentation/screens/profile_screen.dart';
+import 'package:harfidar/features/profile/presentation/screens/settings_screen.dart';
+import 'package:harfidar/features/profile/presentation/screens/my_favorites_screen.dart';
+import 'package:harfidar/features/profile/presentation/screens/edit_profile_screen.dart';
+
+// ── Notifications ─────────────────────────────────────────────────────────────
+import 'package:harfidar/features/notifications/presentation/screens/notifications_screen.dart';
+
+// ── Reviews ──────────────────────────────────────────────────────────────────
+import 'package:harfidar/features/reviews/presentation/screens/write_review_screen.dart';
+
+// ── Navigation shell ─────────────────────────────────────────────────────────
+import 'package:harfidar/features/navigation/presentation/screens/main_navigation_screen.dart';
 
 // ---------------------------------------------------------------------------
 // Provider
@@ -70,44 +94,50 @@ GoRouter _buildRouter(SecureStorage secureStorage) {
       GoRoute(
         path: RouteNames.pathSplash,
         name: RouteNames.splash,
-        builder: (context, state) =>
-            const _PlaceholderScreen(title: 'Splash'),
+        builder: (context, state) => const SplashScreen(),
       ),
 
       // ── Onboarding ───────────────────────────────────────────────────────
       GoRoute(
         path: RouteNames.pathOnboarding,
         name: RouteNames.onboarding,
-        builder: (context, state) =>
-            const _PlaceholderScreen(title: 'Onboarding'),
+        builder: (context, state) => const OnboardingScreen(),
       ),
 
       // ── Auth ─────────────────────────────────────────────────────────────
       GoRoute(
         path: RouteNames.pathLogin,
         name: RouteNames.login,
-        builder: (context, state) =>
-            const _PlaceholderScreen(title: 'Login'),
+        builder: (context, state) => const LoginScreen(),
         routes: [
           GoRoute(
             path: 'forgot-password',
             name: RouteNames.forgotPassword,
-            builder: (context, state) =>
-                const _PlaceholderScreen(title: 'Forgot Password'),
+            builder: (context, state) => const ForgotPasswordScreen(),
           ),
           GoRoute(
             path: 'reset-password',
             name: RouteNames.resetPassword,
-            builder: (context, state) =>
-                const _PlaceholderScreen(title: 'Reset Password'),
+            builder: (context, state) {
+              final token = state.uri.queryParameters['token'] ?? '';
+              return ResetPasswordScreen(token: token);
+            },
           ),
           GoRoute(
             path: 'otp',
             name: RouteNames.otpVerification,
             builder: (context, state) {
               final phone = state.uri.queryParameters['phone'] ?? '';
-              return _PlaceholderScreen(
-                  title: 'OTP Verification – $phone');
+              // OTP screen placeholder — no dedicated screen file provided
+              return Scaffold(
+                appBar: AppBar(title: const Text('التحقق من الرمز')),
+                body: Center(
+                  child: Text(
+                    'رمز التحقق للرقم: $phone',
+                    style: const TextStyle(fontFamily: 'Cairo', fontSize: 16),
+                  ),
+                ),
+              );
             },
           ),
         ],
@@ -115,58 +145,61 @@ GoRouter _buildRouter(SecureStorage secureStorage) {
       GoRoute(
         path: RouteNames.pathRegister,
         name: RouteNames.register,
-        builder: (context, state) =>
-            const _PlaceholderScreen(title: 'Register'),
+        builder: (context, state) => const RegisterScreen(),
       ),
 
       // ── Craftsman profile setup (post-register) ───────────────────────────
       GoRoute(
         path: RouteNames.pathCraftsmanProfileSetup,
         name: RouteNames.craftsmanProfileSetup,
-        builder: (context, state) =>
-            const _PlaceholderScreen(title: 'Craftsman Profile Setup'),
+        builder: (context, state) => const CraftsmanProfileSetupScreen(),
       ),
 
       // ── Main Shell (bottom navigation) ────────────────────────────────────
       ShellRoute(
         builder: (context, state, child) =>
-            _MainNavigationShell(child: child),
+            MainNavigationScreen(child: child),
         routes: [
           // Home tab
           GoRoute(
             path: RouteNames.pathHome,
             name: RouteNames.home,
-            builder: (context, state) =>
-                const _PlaceholderScreen(title: 'Home'),
+            builder: (context, state) => const HomeScreen(),
           ),
 
           // Craftsmen tab
           GoRoute(
             path: RouteNames.pathCraftsmenList,
             name: RouteNames.craftsmenList,
-            builder: (context, state) =>
-                const _PlaceholderScreen(title: 'Craftsmen'),
+            builder: (context, state) => const CraftsmenListScreen(),
             routes: [
               GoRoute(
                 path: ':id',
                 name: RouteNames.craftsmanDetail,
                 builder: (context, state) {
                   final id = state.pathParameters['id']!;
-                  return _PlaceholderScreen(
-                      title: 'Craftsman Detail – $id');
+                  return CraftsmanDetailScreen(craftsmanId: id);
                 },
                 routes: [
                   GoRoute(
                     path: 'portfolio',
                     name: RouteNames.portfolio,
-                    builder: (context, state) =>
-                        const _PlaceholderScreen(title: 'Portfolio'),
+                    builder: (context, state) {
+                      // Portfolio is part of CraftsmanDetailScreen — navigate back
+                      final id = state.pathParameters['id']!;
+                      return CraftsmanDetailScreen(craftsmanId: id);
+                    },
                   ),
                   GoRoute(
                     path: 'review',
                     name: RouteNames.writeReview,
-                    builder: (context, state) =>
-                        const _PlaceholderScreen(title: 'Write Review'),
+                    builder: (context, state) {
+                      final id = state.pathParameters['id']!;
+                      return WriteReviewScreen(
+                        craftsmanId: id,
+                        targetName: '',
+                      );
+                    },
                   ),
                 ],
               ),
@@ -177,16 +210,14 @@ GoRouter _buildRouter(SecureStorage secureStorage) {
           GoRoute(
             path: RouteNames.pathListingsList,
             name: RouteNames.listingsList,
-            builder: (context, state) =>
-                const _PlaceholderScreen(title: 'Listings'),
+            builder: (context, state) => const ListingsListScreen(),
             routes: [
               GoRoute(
                 path: ':id',
                 name: RouteNames.listingDetail,
                 builder: (context, state) {
                   final id = state.pathParameters['id']!;
-                  return _PlaceholderScreen(
-                      title: 'Listing Detail – $id');
+                  return ListingDetailScreen(listingId: id);
                 },
               ),
             ],
@@ -196,16 +227,14 @@ GoRouter _buildRouter(SecureStorage secureStorage) {
           GoRoute(
             path: RouteNames.pathChatList,
             name: RouteNames.chatList,
-            builder: (context, state) =>
-                const _PlaceholderScreen(title: 'Chats'),
+            builder: (context, state) => const ChatListScreen(),
             routes: [
               GoRoute(
                 path: ':conversationId',
                 name: RouteNames.chatRoom,
                 builder: (context, state) {
                   final id = state.pathParameters['conversationId']!;
-                  return _PlaceholderScreen(
-                      title: 'Chat Room – $id');
+                  return ChatRoomScreen(roomId: id);
                 },
               ),
             ],
@@ -215,8 +244,7 @@ GoRouter _buildRouter(SecureStorage secureStorage) {
           GoRoute(
             path: RouteNames.pathProfile,
             name: RouteNames.profile,
-            builder: (context, state) =>
-                const _PlaceholderScreen(title: 'Profile'),
+            builder: (context, state) => const ProfileScreen(),
           ),
         ],
       ),
@@ -225,38 +253,32 @@ GoRouter _buildRouter(SecureStorage secureStorage) {
       GoRoute(
         path: RouteNames.pathFavorites,
         name: RouteNames.favorites,
-        builder: (context, state) =>
-            const _PlaceholderScreen(title: 'Favorites'),
+        builder: (context, state) => const MyFavoritesScreen(),
       ),
       GoRoute(
         path: RouteNames.pathNotifications,
         name: RouteNames.notifications,
-        builder: (context, state) =>
-            const _PlaceholderScreen(title: 'Notifications'),
+        builder: (context, state) => const NotificationsScreen(),
       ),
       GoRoute(
         path: RouteNames.pathSettings,
         name: RouteNames.settings,
-        builder: (context, state) =>
-            const _PlaceholderScreen(title: 'Settings'),
+        builder: (context, state) => const SettingsScreen(),
       ),
       GoRoute(
         path: RouteNames.pathMyListings,
         name: RouteNames.myListings,
-        builder: (context, state) =>
-            const _PlaceholderScreen(title: 'My Listings'),
+        builder: (context, state) => const MyListingsScreen(),
       ),
       GoRoute(
         path: '/create-listing',
         name: RouteNames.createListing,
-        builder: (context, state) =>
-            const _PlaceholderScreen(title: 'Create Listing'),
+        builder: (context, state) => const CreateListingScreen(),
       ),
       GoRoute(
         path: '/edit-profile',
         name: RouteNames.editProfile,
-        builder: (context, state) =>
-            const _PlaceholderScreen(title: 'Edit Profile'),
+        builder: (context, state) => const EditProfileScreen(),
       ),
     ],
 
@@ -304,71 +326,3 @@ const _authRoutes = {
   '/login/reset-password',
   '/login/otp',
 };
-
-// ---------------------------------------------------------------------------
-// Main navigation shell — bottom navigation bar
-// ---------------------------------------------------------------------------
-
-class _MainNavigationShell extends StatelessWidget {
-  const _MainNavigationShell({required this.child});
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final location = GoRouterState.of(context).matchedLocation;
-
-    int currentIndex = 0;
-    if (location.startsWith(RouteNames.pathCraftsmenList)) currentIndex = 1;
-    if (location.startsWith(RouteNames.pathListingsList)) currentIndex = 2;
-    if (location.startsWith(RouteNames.pathChatList)) currentIndex = 3;
-    if (location.startsWith(RouteNames.pathProfile)) currentIndex = 4;
-
-    return Scaffold(
-      body: child,
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: currentIndex,
-        onTap: (index) {
-          switch (index) {
-            case 0:
-              context.go(RouteNames.pathHome);
-            case 1:
-              context.go(RouteNames.pathCraftsmenList);
-            case 2:
-              context.go(RouteNames.pathListingsList);
-            case 3:
-              context.go(RouteNames.pathChatList);
-            case 4:
-              context.go(RouteNames.pathProfile);
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'الرئيسية',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.handyman_outlined),
-            activeIcon: Icon(Icons.handyman),
-            label: 'الحرفيون',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.apartment_outlined),
-            activeIcon: Icon(Icons.apartment),
-            label: 'العقارات',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_outline),
-            activeIcon: Icon(Icons.chat_bubble),
-            label: 'المحادثات',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'حسابي',
-          ),
-        ],
-      ),
-    );
-  }
-}

@@ -13,6 +13,7 @@ import * as bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { RedisService } from '../../shared/redis/redis.service';
+import { EmailService } from '../../shared/email/email.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 
@@ -26,6 +27,7 @@ export class AuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
     private redis: RedisService,
+    private emailService: EmailService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -79,8 +81,8 @@ export class AuthService {
       },
     });
 
-    // TODO: Send verification email (integrate with email service)
-    this.logger.log(`User registered: ${user.email}, verification token: ${verificationToken}`);
+    await this.emailService.sendVerificationEmail(user.email, user.firstName, verificationToken);
+    this.logger.log(`User registered: ${user.email}`);
 
     const tokens = await this.generateTokens(user.id, user.email, user.role);
 
@@ -206,16 +208,22 @@ export class AuthService {
       throw new BadRequestException('Verification token has expired');
     }
 
-    await this.prisma.$transaction([
+    const [verifiedUser] = await this.prisma.$transaction([
       this.prisma.user.update({
         where: { id: verification.userId },
         data: { isEmailVerified: true },
+        select: { email: true, firstName: true },
       }),
       this.prisma.emailVerification.update({
         where: { id: verification.id },
         data: { usedAt: new Date() },
       }),
     ]);
+
+    // Send welcome email — non-blocking, failure is swallowed inside sendWelcomeEmail
+    this.emailService
+      .sendWelcomeEmail(verifiedUser.email, verifiedUser.firstName)
+      .catch((err) => this.logger.error('Welcome email error', err));
 
     return { message: 'Email verified successfully' };
   }
@@ -245,8 +253,8 @@ export class AuthService {
       },
     });
 
-    // TODO: Send password reset email
-    this.logger.log(`Password reset requested for ${email}, token: ${resetToken}`);
+    await this.emailService.sendPasswordResetEmail(user.email, user.firstName, resetToken);
+    this.logger.log(`Password reset email sent to ${email}`);
 
     return { message: 'If this email exists, a reset link has been sent' };
   }

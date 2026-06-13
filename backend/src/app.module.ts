@@ -6,6 +6,8 @@ import configuration from './config/configuration';
 import { PrismaModule } from './shared/prisma/prisma.module';
 import { RedisModule } from './shared/redis/redis.module';
 import { CloudinaryModule } from './shared/cloudinary/cloudinary.module';
+import { EmailModule } from './shared/email/email.module';
+import { FirebaseModule } from './shared/firebase/firebase.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { CraftsmenModule } from './modules/craftsmen/craftsmen.module';
@@ -33,6 +35,8 @@ import { SpecialtiesModule } from './modules/specialties/specialties.module';
     PrismaModule,
     RedisModule,
     CloudinaryModule,
+    EmailModule,
+    FirebaseModule,
     AuthModule,
     UsersModule,
     CraftsmenModule,
