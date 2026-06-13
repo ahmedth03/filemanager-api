@@ -99,11 +99,13 @@ Future<void> main() async {
         ),
       );
 
-      // Firebase
-      await Firebase.initializeApp();
-
-      // Local notifications + FCM
-      await _initNotifications();
+      // Firebase (optional — app runs without real Firebase credentials)
+      try {
+        await Firebase.initializeApp();
+        await _initNotifications();
+      } catch (e) {
+        debugPrint('Firebase init skipped: $e');
+      }
 
       // Error handlers
       _setupErrorHandlers();
