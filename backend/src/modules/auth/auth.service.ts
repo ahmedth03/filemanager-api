@@ -81,7 +81,11 @@ export class AuthService {
       },
     });
 
-    await this.emailService.sendVerificationEmail(user.email, user.firstName, verificationToken);
+    try {
+      await this.emailService.sendVerificationEmail(user.email, user.firstName, verificationToken);
+    } catch (e) {
+      this.logger.warn(`Email service unavailable; verification email not sent to ${user.email}`);
+    }
     this.logger.log(`User registered: ${user.email}`);
 
     const tokens = await this.generateTokens(user.id, user.email, user.role);
@@ -161,16 +165,10 @@ export class AuthService {
 
     const user = session.user;
 
-    const tokens = await this.generateTokens(user.id, user.email, user.role);
+    // Delete old session first to avoid unique constraint violation on refreshToken
+    await this.prisma.userSession.delete({ where: { id: sessionId } });
 
-    // Replace old session with new tokens
-    await this.prisma.userSession.update({
-      where: { id: sessionId },
-      data: {
-        refreshToken: tokens.refreshToken,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      },
-    });
+    const tokens = await this.generateTokens(user.id, user.email, user.role);
 
     return tokens;
   }
@@ -253,8 +251,12 @@ export class AuthService {
       },
     });
 
-    await this.emailService.sendPasswordResetEmail(user.email, user.firstName, resetToken);
-    this.logger.log(`Password reset email sent to ${email}`);
+    try {
+      await this.emailService.sendPasswordResetEmail(user.email, user.firstName, resetToken);
+      this.logger.log(`Password reset email sent to ${email}`);
+    } catch (e) {
+      this.logger.warn(`Email service unavailable; password reset email not sent to ${email}`);
+    }
 
     return { message: 'If this email exists, a reset link has been sent' };
   }

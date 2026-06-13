@@ -9,7 +9,7 @@ import {
   Min,
   Max,
 } from 'class-validator';
-import { WilayaCode, PropertyType } from '@prisma/client';
+import { WilayaCode, PropertyType, TransactionType } from '@prisma/client';
 import { Type } from 'class-transformer';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 
@@ -28,6 +28,18 @@ export class SearchListingDto extends PaginationDto {
   @IsOptional()
   @IsEnum(PropertyType)
   type?: PropertyType;
+
+  @ApiPropertyOptional({ enum: TransactionType, description: 'Filter by transaction type (RENT or SALE)' })
+  @IsOptional()
+  @IsEnum(TransactionType)
+  transactionType?: TransactionType;
+
+  @ApiPropertyOptional({ description: 'Number of rooms (exact match)' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Type(() => Number)
+  rooms?: number;
 
   @ApiPropertyOptional({ description: 'Filter by city name (case-insensitive partial match)' })
   @IsOptional()

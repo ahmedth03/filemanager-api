@@ -74,6 +74,8 @@ export class ListingsService {
       query,
       wilaya,
       type,
+      transactionType,
+      rooms,
       city,
       minPrice,
       maxPrice,
@@ -104,6 +106,8 @@ export class ListingsService {
 
     if (wilaya) where.wilaya = wilaya;
     if (type) where.type = type;
+    if (transactionType) where.transactionType = transactionType;
+    if (rooms !== undefined) where.rooms = rooms;
     if (city) where.city = { contains: city, mode: 'insensitive' };
 
     if (minPrice !== undefined || maxPrice !== undefined) {

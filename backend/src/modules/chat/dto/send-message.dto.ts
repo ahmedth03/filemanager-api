@@ -2,9 +2,10 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsOptional, MaxLength } from 'class-validator';
 
 export class SendMessageDto {
-  @ApiProperty({ description: 'Chat room ID' })
+  @ApiPropertyOptional({ description: 'Chat room ID (inferred from URL path when omitted)' })
+  @IsOptional()
   @IsString()
-  roomId: string;
+  roomId?: string;
 
   @ApiProperty({ description: 'Message content', maxLength: 2000 })
   @IsString()

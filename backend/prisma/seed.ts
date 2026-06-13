@@ -278,30 +278,16 @@ async function main() {
 
   // ── Specialties ───────────────────────────────────────────────────────────────
   console.log(`  Seeding ${SPECIALTIES.length} specialties...`);
-  let specialtyCount = 0;
-  for (const specialty of SPECIALTIES) {
-    await prisma.specialty.upsert({
-      where: {
-        // Use a composite of nameAr as the natural key; fall back to create if missing
-        // Prisma requires a unique field for upsert – nameAr is unique enough here
-        nameAr: specialty.nameAr,
-      } as any,
-      update: {
-        nameFr: specialty.nameFr,
-        nameEn: specialty.nameEn,
-        icon: specialty.icon,
-        isActive: true,
-      },
-      create: {
-        nameAr: specialty.nameAr,
-        nameFr: specialty.nameFr,
-        nameEn: specialty.nameEn,
-        icon: specialty.icon,
-        isActive: true,
-      },
-    });
-    specialtyCount++;
-  }
+  const { count: specialtyCount } = await prisma.specialty.createMany({
+    data: SPECIALTIES.map((s) => ({
+      nameAr: s.nameAr,
+      nameFr: s.nameFr,
+      nameEn: s.nameEn,
+      icon: s.icon,
+      isActive: true,
+    })),
+    skipDuplicates: true,
+  });
   console.log(`  ✔  ${specialtyCount} specialties seeded.\n`);
 
   // ── Admin user ────────────────────────────────────────────────────────────────

@@ -78,19 +78,6 @@ export class CraftsmenController {
     return this.craftsmenService.getFeatured(+limit);
   }
 
-  @Public()
-  @Get(':id')
-  @ApiOperation({
-    summary: 'Get craftsman by ID',
-    description: 'Returns full profile including portfolio and recent reviews.',
-  })
-  @ApiParam({ name: 'id', description: 'Craftsman ID' })
-  @ApiResponse({ status: 200, description: 'Craftsman profile' })
-  @ApiResponse({ status: 404, description: 'Craftsman not found' })
-  findOne(@Param('id') id: string) {
-    return this.craftsmenService.findById(id);
-  }
-
   // ─── Authenticated endpoints ──────────────────────────────────────────────────
 
   @Get('user/me')
@@ -103,6 +90,19 @@ export class CraftsmenController {
   @ApiResponse({ status: 404, description: 'Profile not found' })
   getMyProfile(@CurrentUser('id') userId: string) {
     return this.craftsmenService.findByUserId(userId);
+  }
+
+  @Public()
+  @Get(':id')
+  @ApiOperation({
+    summary: 'Get craftsman by ID',
+    description: 'Returns full profile including portfolio and recent reviews.',
+  })
+  @ApiParam({ name: 'id', description: 'Craftsman ID' })
+  @ApiResponse({ status: 200, description: 'Craftsman profile' })
+  @ApiResponse({ status: 404, description: 'Craftsman not found' })
+  findOne(@Param('id') id: string) {
+    return this.craftsmenService.findById(id);
   }
 
   @Post()
