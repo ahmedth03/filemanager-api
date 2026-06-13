@@ -278,6 +278,22 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   // ------------------------------------------------------------------
+  // resetPassword
+  // ------------------------------------------------------------------
+  Future<bool> resetPassword(String token, String password) async {
+    try {
+      await _repository.resetPassword(token: token, newPassword: password);
+      return true;
+    } on AuthException catch (e) {
+      state = AuthError(e.message);
+      return false;
+    } catch (e) {
+      state = AuthError(e.toString());
+      return false;
+    }
+  }
+
+  // ------------------------------------------------------------------
   // clearError
   // ------------------------------------------------------------------
   void clearError() {
