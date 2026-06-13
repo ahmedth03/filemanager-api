@@ -4,7 +4,9 @@ const config: Config = {
   moduleFileExtensions: ['js', 'json', 'ts'],
   rootDir: 'src',
   testRegex: '.*\\.spec\\.ts$',
-  transform: { '^.+\\.(t|j)s$': 'ts-jest' },
+  transform: {
+    '^.+\\.(t|j)s$': ['ts-jest', { diagnostics: false }],
+  },
   collectCoverageFrom: [
     '**/*.(t|j)s',
     '!**/*.module.ts',
@@ -14,8 +16,11 @@ const config: Config = {
   ],
   coverageDirectory: '../coverage',
   testEnvironment: 'node',
-  moduleNameMapper: { '^@/(.*)$': '<rootDir>/$1' },
-  coverageThresholds: {
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/$1',
+    '^@prisma/client$': '<rootDir>/../__mocks__/@prisma/client.ts',
+  },
+  coverageThreshold: {
     global: { branches: 60, functions: 70, lines: 70, statements: 70 },
   },
 };

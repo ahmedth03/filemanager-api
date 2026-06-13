@@ -57,7 +57,7 @@ describe('UsersService', () => {
     }).compile();
 
     service = module.get<UsersService>(UsersService);
-    jest.clearAllMocks();
+    jest.resetAllMocks();
   });
 
   // ─── findAll ───────────────────────────────────────────────────────────────
@@ -133,7 +133,10 @@ describe('UsersService', () => {
     });
 
     it('should allow admin to update another user', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue(mockUser);
+      // update() calls findUnique twice: user existence check + phone uniqueness check
+      mockPrisma.user.findUnique
+        .mockResolvedValueOnce(mockUser)  // user existence check
+        .mockResolvedValueOnce(null);     // phone uniqueness check (no conflict)
       mockPrisma.user.update.mockResolvedValue({ ...mockUser, firstName: 'Updated' });
 
       const result = await service.update(

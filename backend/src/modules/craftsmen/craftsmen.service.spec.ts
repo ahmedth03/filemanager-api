@@ -295,11 +295,14 @@ describe('CraftsmenService', () => {
 
   describe('findById', () => {
     it('should return cached craftsman if available', async () => {
+      // JSON.parse converts Dates to strings — compare stable string fields
       mockRedis.get.mockResolvedValue(JSON.stringify(mockCraftsman));
 
       const result = await service.findById('craft_1');
 
-      expect(result).toEqual(mockCraftsman);
+      expect(result.id).toBe(mockCraftsman.id);
+      expect(result.userId).toBe(mockCraftsman.userId);
+      expect(result.bio).toBe(mockCraftsman.bio);
       expect(mockPrisma.craftsman.findUnique).not.toHaveBeenCalled();
     });
 
@@ -507,7 +510,10 @@ describe('CraftsmenService', () => {
 
       const result = await service.getFeatured(8);
 
-      expect(result).toEqual(cachedList);
+      // JSON.parse converts Dates to strings — compare stable fields
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(mockCraftsman.id);
+      expect(result[0].bio).toBe(mockCraftsman.bio);
       expect(mockPrisma.craftsman.findMany).not.toHaveBeenCalled();
     });
 

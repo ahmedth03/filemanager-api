@@ -1,3 +1,5 @@
+// @prisma/client is mapped to __mocks__/@prisma/client.ts via jest.config.ts
+// moduleNameMapper so enum types are available even without `prisma generate`.
 import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { AdminService } from './admin.service';

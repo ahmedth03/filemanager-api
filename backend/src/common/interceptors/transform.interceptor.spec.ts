@@ -148,7 +148,8 @@ describe('TransformInterceptor', () => {
 
     interceptor.intercept(mockContext, mockCallHandler).subscribe((response) => {
       expect(response.data).toEqual(nestedData);
-      expect(response.data.user.profile.firstName).toBe('Ahmed');
+      const typedData = response.data as typeof nestedData;
+      expect(typedData.user.profile.firstName).toBe('Ahmed');
       done();
     });
   });
