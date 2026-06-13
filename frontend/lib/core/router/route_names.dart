@@ -49,6 +49,7 @@ class RouteNames {
   static const String writeReview = 'write-review';
   static const String map = 'map';
   static const String webView = 'web-view';
+  static const String report = 'report';
 
   // ── Paths (full path strings for use in GoRouter.go / context.push) ───────
   static const String pathSplash = '/splash';
@@ -71,4 +72,5 @@ class RouteNames {
   static const String pathCraftsmanProfileSetup = '/craftsman-profile-setup';
   static const String pathMyListings = '/my-listings';
   static const String pathEditProfile = '/edit-profile';
+  static const String pathReport = '/report';
 }

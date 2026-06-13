@@ -12,6 +12,7 @@ import 'package:harfidar/features/auth/presentation/screens/login_screen.dart';
 import 'package:harfidar/features/auth/presentation/screens/register_screen.dart';
 import 'package:harfidar/features/auth/presentation/screens/forgot_password_screen.dart';
 import 'package:harfidar/features/auth/presentation/screens/reset_password_screen.dart';
+import 'package:harfidar/features/auth/presentation/screens/otp_verification_screen.dart';
 
 // ── Home ─────────────────────────────────────────────────────────────────────
 import 'package:harfidar/features/home/presentation/screens/home_screen.dart';
@@ -43,6 +44,9 @@ import 'package:harfidar/features/notifications/presentation/screens/notificatio
 
 // ── Reviews ──────────────────────────────────────────────────────────────────
 import 'package:harfidar/features/reviews/presentation/screens/write_review_screen.dart';
+
+// ── Listings (extra screens) ──────────────────────────────────────────────────
+import 'package:harfidar/features/listings/presentation/screens/report_screen.dart';
 
 // ── Navigation shell ─────────────────────────────────────────────────────────
 import 'package:harfidar/features/navigation/presentation/screens/main_navigation_screen.dart';
@@ -129,16 +133,7 @@ GoRouter _buildRouter(SecureStorage secureStorage) {
             name: RouteNames.otpVerification,
             builder: (context, state) {
               final phone = state.uri.queryParameters['phone'] ?? '';
-              // OTP screen placeholder — no dedicated screen file provided
-              return Scaffold(
-                appBar: AppBar(title: const Text('التحقق من الرمز')),
-                body: Center(
-                  child: Text(
-                    'رمز التحقق للرقم: $phone',
-                    style: const TextStyle(fontFamily: 'Cairo', fontSize: 16),
-                  ),
-                ),
-              );
+              return OtpVerificationScreen(phone: phone);
             },
           ),
         ],
@@ -289,6 +284,16 @@ GoRouter _buildRouter(SecureStorage secureStorage) {
         path: '/edit-profile',
         name: RouteNames.editProfile,
         builder: (context, state) => const EditProfileScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.pathReport,
+        name: RouteNames.report,
+        builder: (context, state) {
+          final targetId = state.uri.queryParameters['targetId'] ?? '';
+          final targetType =
+              state.uri.queryParameters['targetType'] ?? 'listing';
+          return ReportScreen(targetId: targetId, targetType: targetType);
+        },
       ),
     ],
 
