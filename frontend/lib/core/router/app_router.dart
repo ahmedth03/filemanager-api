@@ -26,6 +26,7 @@ import 'package:harfidar/features/listings/presentation/screens/listings_list_sc
 import 'package:harfidar/features/listings/presentation/screens/listing_detail_screen.dart';
 import 'package:harfidar/features/listings/presentation/screens/create_listing_screen.dart';
 import 'package:harfidar/features/listings/presentation/screens/my_listings_screen.dart';
+import 'package:harfidar/features/listings/presentation/screens/edit_listing_screen.dart';
 
 // ── Chat ─────────────────────────────────────────────────────────────────────
 import 'package:harfidar/features/chat/presentation/screens/chat_list_screen.dart';
@@ -274,6 +275,15 @@ GoRouter _buildRouter(SecureStorage secureStorage) {
         path: '/create-listing',
         name: RouteNames.createListing,
         builder: (context, state) => const CreateListingScreen(),
+      ),
+      GoRoute(
+        path: '/edit-listing/:id',
+        name: RouteNames.editListing,
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          final listing = state.extra as Map<String, dynamic>? ?? {};
+          return EditListingScreen(listingId: id, listing: listing);
+        },
       ),
       GoRoute(
         path: '/edit-profile',

@@ -177,6 +177,17 @@ class MyListingsNotifier extends StateNotifier<MyListingsState> {
       return false;
     }
   }
+
+  Future<bool> updateListing(String listingId, Map<String, dynamic> data) async {
+    try {
+      final dio = _ref.read(dioProvider);
+      await dio.put('/v1/listings/$listingId', data: data);
+      return true;
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      return false;
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------

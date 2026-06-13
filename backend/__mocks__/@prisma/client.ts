@@ -22,6 +22,11 @@ export const CraftsmanStatus = {
   REJECTED: 'REJECTED',
 } as const;
 
+export const TransactionType = {
+  RENT: 'RENT',
+  SALE: 'SALE',
+} as const;
+
 export const ListingStatus = {
   DRAFT: 'DRAFT',
   ACTIVE: 'ACTIVE',

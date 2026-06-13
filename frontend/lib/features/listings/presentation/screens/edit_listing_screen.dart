@@ -1,20 +1,18 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/network/api_client.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../craftsmen/presentation/widgets/craftsman_filters.dart'
     show kAlgerianWilayas;
 import '../widgets/listing_filters.dart' show kPropertyTypes;
+import '../providers/listings_provider.dart';
 
 // ---------------------------------------------------------------------------
-// Constants
+// Constants (mirrored from create_listing_screen.dart)
 // ---------------------------------------------------------------------------
-const _kAmenities = [
+const _kAmenitiesEdit = [
   {'key': 'furnished', 'label': 'مفروشة', 'icon': Icons.chair_outlined},
   {'key': 'parking', 'label': 'موقف سيارات', 'icon': Icons.local_parking_outlined},
   {'key': 'elevator', 'label': 'مصعد', 'icon': Icons.elevator_outlined},
@@ -25,61 +23,122 @@ const _kAmenities = [
   {'key': 'generator', 'label': 'مولد كهربائي', 'icon': Icons.power_outlined},
 ];
 
-const _kPriceUnits = [
-  {'key': 'perMonth', 'label': 'شهرياً'},
-  {'key': 'perYear', 'label': 'سنوياً'},
-  {'key': 'total', 'label': 'إجمالي'},
+const _kPricePeriodsEdit = [
+  {'key': 'monthly', 'label': 'شهرياً'},
+  {'key': 'weekly', 'label': 'أسبوعياً'},
+  {'key': 'daily', 'label': 'يومياً'},
+  {'key': 'sale', 'label': 'إجمالي'},
 ];
 
-const _kTransactionTypes = [
-  {'key': 'rent', 'label': 'للإيجار'},
-  {'key': 'sale', 'label': 'للبيع'},
+const _kTransactionTypesEdit = [
+  {'key': 'RENT', 'label': 'للإيجار'},
+  {'key': 'SALE', 'label': 'للبيع'},
 ];
 
-class CreateListingScreen extends ConsumerStatefulWidget {
-  const CreateListingScreen({super.key, this.editId});
-  final String? editId;
+// ---------------------------------------------------------------------------
+// Screen
+// ---------------------------------------------------------------------------
+class EditListingScreen extends ConsumerStatefulWidget {
+  const EditListingScreen({
+    super.key,
+    required this.listingId,
+    required this.listing,
+  });
+
+  final String listingId;
+  final Map<String, dynamic> listing;
 
   @override
-  ConsumerState<CreateListingScreen> createState() =>
-      _CreateListingScreenState();
+  ConsumerState<EditListingScreen> createState() => _EditListingScreenState();
 }
 
-class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
+class _EditListingScreenState extends ConsumerState<EditListingScreen> {
   int _step = 0;
   final int _totalSteps = 7;
   bool _isSubmitting = false;
 
-  // Step 1
-  final _titleController = TextEditingController();
-  String? _selectedType;
+  // Step 1 – Transaction type
   String? _selectedTransactionType;
 
-  // Step 2
+  // Step 2 – Property type + title
+  String? _selectedType;
+  final _titleController = TextEditingController();
+
+  // Step 3 – Location
   String? _selectedWilaya;
   final _cityController = TextEditingController();
   final _addressController = TextEditingController();
 
-  // Step 3
+  // Step 4 – Details
   final _roomsController = TextEditingController();
   final _bathroomsController = TextEditingController();
   final _areaController = TextEditingController();
   final _floorController = TextEditingController();
   final _totalFloorsController = TextEditingController();
 
-  // Step 4
+  // Step 5 – Price
   final _priceController = TextEditingController();
-  String _priceUnit = 'perMonth';
+  String _pricePeriod = 'monthly';
 
-  // Step 5
+  // Step 6 – Amenities
   final Set<String> _selectedAmenities = {};
 
-  // Step 6
+  // Step 7 – Description (review + submit)
   final _descriptionController = TextEditingController();
 
-  // Step 7
-  final List<File> _images = [];
-  int _coverIndex = 0;
+  @override
+  void initState() {
+    super.initState();
+    _prefill();
+  }
+
+  void _prefill() {
+    final l = widget.listing;
+
+    // Transaction type – backend stores 'RENT'/'SALE'; fall back gracefully
+    final rawTxType = (l['transactionType'] as String? ?? 'RENT').toUpperCase();
+    _selectedTransactionType =
+        rawTxType == 'SALE' ? 'SALE' : 'RENT';
+
+    // Property type – backend stores 'APARTMENT', 'HOUSE', etc.
+    // kPropertyTypes keys are lowercase (e.g. 'apartment')
+    final rawType = (l['type'] as String? ?? '').toLowerCase();
+    _selectedType = kPropertyTypes.any((t) => t['key'] == rawType)
+        ? rawType
+        : null;
+
+    _titleController.text = l['title'] as String? ?? '';
+    _descriptionController.text = l['description'] as String? ?? '';
+
+    // Location – wilaya is stored as 'W01' etc in backend
+    _selectedWilaya = l['wilaya'] as String?;
+    _cityController.text = l['city'] as String? ?? '';
+    _addressController.text = l['address'] as String? ?? '';
+
+    // Details
+    final rooms = l['rooms'];
+    _roomsController.text = rooms != null ? rooms.toString() : '';
+    final bathrooms = l['bathrooms'];
+    _bathroomsController.text = bathrooms != null ? bathrooms.toString() : '';
+    final area = l['area'];
+    _areaController.text = area != null ? area.toString() : '';
+    final floor = l['floor'];
+    _floorController.text = floor != null ? floor.toString() : '';
+    final totalFloors = l['totalFloors'];
+    _totalFloorsController.text =
+        totalFloors != null ? totalFloors.toString() : '';
+
+    // Price
+    final price = l['price'];
+    _priceController.text = price != null ? price.toString() : '';
+    _pricePeriod = l['pricePeriod'] as String? ?? 'monthly';
+
+    // Amenities – derive from boolean fields
+    if (l['isFurnished'] == true) _selectedAmenities.add('furnished');
+    if (l['hasParking'] == true) _selectedAmenities.add('parking');
+    if (l['hasElevator'] == true) _selectedAmenities.add('elevator');
+    if (l['hasBalcony'] == true) _selectedAmenities.add('balcony');
+  }
 
   @override
   void dispose() {
@@ -99,22 +158,19 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
   bool _canProceed() {
     switch (_step) {
       case 0:
-        return _titleController.text.trim().isNotEmpty &&
-            _selectedType != null &&
-            _selectedTransactionType != null;
+        return _selectedTransactionType != null;
       case 1:
-        return _selectedWilaya != null &&
-            _cityController.text.trim().isNotEmpty;
+        return _selectedType != null && _titleController.text.trim().isNotEmpty;
       case 2:
-        return _areaController.text.trim().isNotEmpty;
+        return _selectedWilaya != null && _cityController.text.trim().isNotEmpty;
       case 3:
-        return _priceController.text.trim().isNotEmpty;
+        return _areaController.text.trim().isNotEmpty;
       case 4:
-        return true;
+        return _priceController.text.trim().isNotEmpty;
       case 5:
-        return _descriptionController.text.trim().isNotEmpty;
+        return true; // amenities optional
       case 6:
-        return true;
+        return _descriptionController.text.trim().isNotEmpty;
       default:
         return false;
     }
@@ -143,37 +199,25 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
     if (_step > 0) setState(() => _step--);
   }
 
-  Future<void> _pickImages() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickMultiImage(imageQuality: 85, maxWidth: 1200);
-    if (picked.isNotEmpty) {
-      setState(() {
-        for (final img in picked) {
-          if (_images.length < 15) {
-            _images.add(File(img.path));
-          }
-        }
-      });
-    }
-  }
-
   Future<void> _submit() async {
     setState(() => _isSubmitting = true);
     try {
       final dio = ref.read(dioProvider);
 
-      // Build payload
       final payload = <String, dynamic>{
         'title': _titleController.text.trim(),
-        'type': _selectedType,
-        'transactionType': _selectedTransactionType?.toUpperCase(),
+        'description': _descriptionController.text.trim(),
+        'type': _selectedType?.toUpperCase(),
+        'transactionType': _selectedTransactionType,
         'wilaya': _selectedWilaya,
         'city': _cityController.text.trim(),
         'address': _addressController.text.trim(),
         'price': double.tryParse(_priceController.text.trim()) ?? 0,
-        'priceUnit': _priceUnit,
-        'description': _descriptionController.text.trim(),
-        'amenities': _selectedAmenities.toList(),
+        'pricePeriod': _pricePeriod,
+        'hasParking': _selectedAmenities.contains('parking'),
+        'hasElevator': _selectedAmenities.contains('elevator'),
+        'hasBalcony': _selectedAmenities.contains('balcony'),
+        'isFurnished': _selectedAmenities.contains('furnished'),
       };
 
       if (_roomsController.text.isNotEmpty) {
@@ -192,31 +236,13 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
         payload['totalFloors'] = int.tryParse(_totalFloorsController.text);
       }
 
-      final response = await dio.post('/v1/listings', data: payload);
-      final listingId = response.data['data']?['_id']?.toString() ??
-          response.data['data']?['id']?.toString() ?? '';
-
-      // Upload images if any
-      if (_images.isNotEmpty && listingId.isNotEmpty) {
-        for (int i = 0; i < _images.length; i++) {
-          try {
-            final bytes = await _images[i].readAsBytes();
-            // In production, use FormData with MultipartFile
-            await dio.post('/v1/listings/$listingId/images', data: {
-              'isCover': i == _coverIndex,
-              'order': i,
-            });
-          } catch (_) {
-            // Skip failed uploads
-          }
-        }
-      }
+      await dio.put('/v1/listings/${widget.listingId}', data: payload);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'تم نشر الإعلان بنجاح!',
+              'تم تحديث الإعلان بنجاح!',
               style: TextStyle(fontFamily: 'Cairo'),
             ),
             backgroundColor: AppColors.success,
@@ -241,6 +267,10 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------------
+
   @override
   Widget build(BuildContext context) {
     return Directionality(
@@ -249,9 +279,9 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
         backgroundColor: AppColors.background,
         appBar: AppBar(
           backgroundColor: AppColors.primary,
-          title: Text(
-            widget.editId != null ? 'تعديل الإعلان' : 'إضافة إعلان جديد',
-            style: const TextStyle(
+          title: const Text(
+            'تعديل الإعلان',
+            style: TextStyle(
               fontFamily: 'Cairo',
               fontWeight: FontWeight.w700,
               color: Colors.white,
@@ -259,8 +289,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
           ),
           leading: _step > 0
               ? IconButton(
-                  icon: const Icon(Icons.arrow_back_ios_new,
-                      color: Colors.white),
+                  icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
                   onPressed: _back,
                 )
               : IconButton(
@@ -270,11 +299,10 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
         ),
         body: Column(
           children: [
-            _ProgressBar(current: _step, total: _totalSteps),
+            _EditProgressBar(current: _step, total: _totalSteps),
             Container(
               color: Colors.white,
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 20, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               child: Row(
                 children: [
                   Container(
@@ -370,9 +398,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
                                   strokeWidth: 2, color: Colors.white),
                             )
                           : Text(
-                              _step < _totalSteps - 1
-                                  ? 'التالي'
-                                  : 'نشر الإعلان',
+                              _step < _totalSteps - 1 ? 'التالي' : 'حفظ التعديلات',
                               style: const TextStyle(
                                 fontFamily: 'Cairo',
                                 fontWeight: FontWeight.w700,
@@ -393,26 +419,78 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
   Widget _buildStep(int step) {
     switch (step) {
       case 0:
-        return _buildStep1();
+        return _buildStep1TransactionType();
       case 1:
-        return _buildStep2();
+        return _buildStep2PropertyType();
       case 2:
-        return _buildStep3();
+        return _buildStep3Location();
       case 3:
-        return _buildStep4();
+        return _buildStep4Details();
       case 4:
-        return _buildStep5();
+        return _buildStep5Price();
       case 5:
-        return _buildStep6();
+        return _buildStep6Amenities();
       case 6:
-        return _buildStep7();
+        return _buildStep7Review();
       default:
         return const SizedBox.shrink();
     }
   }
 
-  // Step 1: Title + type
-  Widget _buildStep1() {
+  // Step 1: Transaction type
+  Widget _buildStep1TransactionType() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'اختر نوع العملية',
+          style: TextStyle(
+            fontFamily: 'Cairo',
+            fontSize: 14,
+            color: AppColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 20),
+        Row(
+          children: _kTransactionTypesEdit.map((t) {
+            final isSelected = _selectedTransactionType == t['key'];
+            return Padding(
+              padding: const EdgeInsets.only(left: 12),
+              child: GestureDetector(
+                onTap: () =>
+                    setState(() => _selectedTransactionType = t['key']),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 32, vertical: 16),
+                  decoration: BoxDecoration(
+                    color: isSelected ? AppColors.accent : Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: isSelected ? AppColors.accent : AppColors.border,
+                      width: isSelected ? 2 : 1,
+                    ),
+                  ),
+                  child: Text(
+                    t['label']!,
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: isSelected ? Colors.white : AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  // Step 2: Property type + title
+  Widget _buildStep2PropertyType() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -469,56 +547,21 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
             );
           },
         ),
-        const SizedBox(height: 20),
-        _label('نوع العملية *'),
-        const SizedBox(height: 12),
-        Row(
-          children: _kTransactionTypes.map((t) {
-            final isSelected = _selectedTransactionType == t['key'];
-            return Padding(
-              padding: const EdgeInsets.only(left: 10),
-              child: GestureDetector(
-                onTap: () =>
-                    setState(() => _selectedTransactionType = t['key']),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 24, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: isSelected ? AppColors.accent : Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isSelected ? AppColors.accent : AppColors.border,
-                    ),
-                  ),
-                  child: Text(
-                    t['label']!,
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color:
-                          isSelected ? Colors.white : AppColors.textPrimary,
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
-        ),
       ],
     );
   }
 
-  // Step 2: Location
-  Widget _buildStep2() {
+  // Step 3: Location
+  Widget _buildStep3Location() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _label('الولاية *'),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
-          value: _selectedWilaya,
+          value: kAlgerianWilayas.contains(_selectedWilaya)
+              ? _selectedWilaya
+              : null,
           decoration: _inputDeco(hint: 'اختر الولاية'),
           style: const TextStyle(
               fontFamily: 'Cairo', color: AppColors.textPrimary, fontSize: 14),
@@ -553,8 +596,8 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
     );
   }
 
-  // Step 3: Rooms + area + floor
-  Widget _buildStep3() {
+  // Step 4: Details
+  Widget _buildStep4Details() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -649,8 +692,8 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
     );
   }
 
-  // Step 4: Price
-  Widget _buildStep4() {
+  // Step 5: Price
+  Widget _buildStep5Price() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -664,35 +707,33 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
           style: const TextStyle(fontFamily: 'Cairo', fontSize: 18),
         ),
         const SizedBox(height: 20),
-        _label('وحدة السعر'),
+        _label('فترة السعر'),
         const SizedBox(height: 12),
-        Row(
-          children: _kPriceUnits.map((u) {
-            final isSelected = _priceUnit == u['key'];
-            return Padding(
-              padding: const EdgeInsets.only(left: 10),
-              child: GestureDetector(
-                onTap: () => setState(() => _priceUnit = u['key']!),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: isSelected ? AppColors.primary : Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: isSelected ? AppColors.primary : AppColors.border,
-                    ),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: _kPricePeriodsEdit.map((u) {
+            final isSelected = _pricePeriod == u['key'];
+            return GestureDetector(
+              onTap: () => setState(() => _pricePeriod = u['key']!),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.primary : Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isSelected ? AppColors.primary : AppColors.border,
                   ),
-                  child: Text(
-                    u['label']!,
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color:
-                          isSelected ? Colors.white : AppColors.textPrimary,
-                    ),
+                ),
+                child: Text(
+                  u['label']!,
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: isSelected ? Colors.white : AppColors.textPrimary,
                   ),
                 ),
               ),
@@ -724,7 +765,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
                       ),
                     ),
                     Text(
-                      '${_priceController.text} دج / ${_kPriceUnits.firstWhere((u) => u['key'] == _priceUnit)['label']}',
+                      '${_priceController.text} دج / ${_kPricePeriodsEdit.firstWhere((u) => u['key'] == _pricePeriod)['label']}',
                       style: const TextStyle(
                         fontFamily: 'Cairo',
                         fontSize: 18,
@@ -741,8 +782,8 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
     );
   }
 
-  // Step 5: Amenities
-  Widget _buildStep5() {
+  // Step 6: Amenities
+  Widget _buildStep6Amenities() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -755,7 +796,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
           ),
         ),
         const SizedBox(height: 20),
-        ..._kAmenities.map((a) {
+        ..._kAmenitiesEdit.map((a) {
           final key = a['key'] as String;
           final label = a['label'] as String;
           final icon = a['icon'] as IconData;
@@ -813,8 +854,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
                       width: 24,
                       height: 24,
                       decoration: BoxDecoration(
-                        color:
-                            isSelected ? AppColors.primary : Colors.white,
+                        color: isSelected ? AppColors.primary : Colors.white,
                         shape: BoxShape.circle,
                         border: Border.all(
                           color: isSelected
@@ -837,24 +877,51 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
     );
   }
 
-  // Step 6: Description
-  Widget _buildStep6() {
+  // Step 7: Review + description + submit
+  Widget _buildStep7Review() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'اكتب وصفاً تفصيلياً للعقار',
-          style: TextStyle(
-            fontFamily: 'Cairo',
-            fontSize: 14,
-            color: AppColors.textSecondary,
+        // Summary card
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'ملخص التعديلات',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const Divider(height: 20),
+              _summaryRow('نوع العملية',
+                  _selectedTransactionType == 'SALE' ? 'للبيع' : 'للإيجار'),
+              _summaryRow('العنوان', _titleController.text),
+              _summaryRow('الولاية', _selectedWilaya ?? '-'),
+              _summaryRow('المدينة', _cityController.text),
+              _summaryRow('المساحة',
+                  _areaController.text.isNotEmpty ? '${_areaController.text} م²' : '-'),
+              _summaryRow('السعر',
+                  '${_priceController.text} دج'),
+            ],
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
+        _label('الوصف *'),
+        const SizedBox(height: 8),
         TextFormField(
           controller: _descriptionController,
           textDirection: TextDirection.rtl,
-          maxLines: 8,
+          maxLines: 6,
           maxLength: 1000,
           decoration: _inputDeco(
               hint:
@@ -865,154 +932,33 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
     );
   }
 
-  // Step 7: Images
-  Widget _buildStep7() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'أضف صور العقار (اختياري، حتى 15 صورة)',
-          style: TextStyle(
-            fontFamily: 'Cairo',
-            fontSize: 14,
-            color: AppColors.textSecondary,
-          ),
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'اضغط على صورة لتعيينها كصورة غلاف',
-          style: TextStyle(
-            fontFamily: 'Cairo',
-            fontSize: 12,
-            color: AppColors.textSecondary,
-          ),
-        ),
-        const SizedBox(height: 16),
-        if (_images.isNotEmpty) ...[
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate:
-                const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
-              childAspectRatio: 1,
+  Widget _summaryRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '$label: ',
+            style: const TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 13,
+              color: AppColors.textSecondary,
             ),
-            itemCount: _images.length,
-            itemBuilder: (_, i) {
-              final isCover = i == _coverIndex;
-              return GestureDetector(
-                onTap: () => setState(() => _coverIndex = i),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: Image.file(_images[i], fit: BoxFit.cover),
-                    ),
-                    if (isCover)
-                      Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                              color: AppColors.accent, width: 3),
-                        ),
-                      ),
-                    if (isCover)
-                      Positioned(
-                        top: 6,
-                        right: 6,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.accent,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: const Text(
-                            'غلاف',
-                            style: TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 10,
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                    Positioned(
-                      top: isCover ? 28 : 4,
-                      left: 4,
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _images.removeAt(i);
-                            if (_coverIndex >= _images.length) {
-                              _coverIndex = 0;
-                            }
-                          });
-                        },
-                        child: Container(
-                          width: 22,
-                          height: 22,
-                          decoration: const BoxDecoration(
-                            color: Colors.red,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.close,
-                              color: Colors.white, size: 12),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
           ),
-          const SizedBox(height: 16),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ),
         ],
-        if (_images.length < 15)
-          GestureDetector(
-            onTap: _pickImages,
-            child: Container(
-              height: 120,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: AppColors.primary.withOpacity(0.3),
-                  width: 2,
-                ),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.add_photo_alternate_outlined,
-                      size: 36, color: AppColors.primary),
-                  const SizedBox(height: 8),
-                  Text(
-                    _images.isEmpty ? 'إضافة صور' : 'إضافة المزيد',
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  Text(
-                    '${_images.length}/15 صور',
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 12,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-      ],
+      ),
     );
   }
 
@@ -1037,8 +983,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: AppColors.primary, width: 2),
       ),
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     );
   }
 
@@ -1056,20 +1001,23 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
 
   String _stepTitle(int step) {
     const titles = [
-      'معلومات أساسية',
+      'نوع العملية',
+      'نوع العقار',
       'الموقع',
       'تفاصيل العقار',
       'السعر',
       'المميزات',
-      'الوصف',
-      'الصور',
+      'المراجعة والوصف',
     ];
     return step < titles.length ? titles[step] : '';
   }
 }
 
-class _ProgressBar extends StatelessWidget {
-  const _ProgressBar({required this.current, required this.total});
+// ---------------------------------------------------------------------------
+// Progress bar widget (local copy to keep file self-contained)
+// ---------------------------------------------------------------------------
+class _EditProgressBar extends StatelessWidget {
+  const _EditProgressBar({required this.current, required this.total});
   final int current;
   final int total;
 
