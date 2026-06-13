@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { NotificationType } from '@prisma/client';
+import { NotificationType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { FirebaseService } from '../../shared/firebase/firebase.service';
 import { PaginationDto } from '../../common/dto/pagination.dto';
@@ -26,7 +26,7 @@ export class NotificationsService {
         type: input.type,
         title: input.title,
         body: input.body,
-        data: input.data ?? {},
+        data: (input.data ?? {}) as Prisma.InputJsonValue,
       },
     });
 
@@ -60,7 +60,7 @@ export class NotificationsService {
         type: input.type,
         title: input.title,
         body: input.body,
-        data: input.data ?? {},
+        data: (input.data ?? {}) as Prisma.InputJsonValue,
       })),
     });
   }

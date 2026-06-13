@@ -29,7 +29,7 @@ async function bootstrap() {
   app.enableCors({
     origin: nodeEnv === 'production'
       ? [frontendUrl, /\.harfidar\.dz$/]
-      : [frontendUrl, 'http://localhost:3000', 'http://localhost:5000', true],
+      : [frontendUrl, 'http://localhost:3000', 'http://localhost:5000'],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept-Language', 'x-refresh-token'],
     credentials: true,
