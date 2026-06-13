@@ -2,9 +2,14 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { PrismaService } from '../../shared/prisma/prisma.service';
+import { FirebaseService } from '../../shared/firebase/firebase.service';
 import { NotificationType } from '@prisma/client';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
+
+const mockFirebase = {
+  sendPushNotification: jest.fn().mockResolvedValue(undefined),
+};
 
 const mockPrisma = {
   notification: {
@@ -17,6 +22,9 @@ const mockPrisma = {
     delete: jest.fn(),
     deleteMany: jest.fn(),
     count: jest.fn(),
+  },
+  user: {
+    findUnique: jest.fn().mockResolvedValue({ fcmToken: null }),
   },
   $transaction: jest.fn(),
 };
@@ -52,6 +60,7 @@ describe('NotificationsService', () => {
       providers: [
         NotificationsService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: FirebaseService, useValue: mockFirebase },
       ],
     }).compile();
 
