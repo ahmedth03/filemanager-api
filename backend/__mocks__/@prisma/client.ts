@@ -49,4 +49,11 @@ export const NotificationType = {
   SYSTEM: 'SYSTEM',
 } as const;
 
+export const ReportType = {
+  LISTING: 'LISTING',
+  CRAFTSMAN: 'CRAFTSMAN',
+  USER: 'USER',
+  MESSAGE: 'MESSAGE',
+} as const;
+
 export const PrismaClient = jest.fn().mockImplementation(() => ({}));

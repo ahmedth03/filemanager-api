@@ -11,6 +11,7 @@ import * as bcrypt from 'bcryptjs';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { RedisService } from '../../shared/redis/redis.service';
+import { EmailService } from '../../shared/email/email.service';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -63,6 +64,12 @@ const mockRedis = {
   del: jest.fn(),
 };
 
+const mockEmail = {
+  sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
+  sendPasswordResetEmail: jest.fn().mockResolvedValue(undefined),
+  sendWelcomeEmail: jest.fn().mockResolvedValue(undefined),
+};
+
 // ─── Test Suite ───────────────────────────────────────────────────────────────
 
 describe('AuthService', () => {
@@ -76,6 +83,7 @@ describe('AuthService', () => {
         { provide: JwtService, useValue: mockJwt },
         { provide: ConfigService, useValue: mockConfig },
         { provide: RedisService, useValue: mockRedis },
+        { provide: EmailService, useValue: mockEmail },
       ],
     }).compile();
 
