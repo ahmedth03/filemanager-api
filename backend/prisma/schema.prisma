@@ -29,6 +29,11 @@ enum PropertyType {
   COMMERCIAL
 }
 
+enum TransactionType {
+  RENT
+  SALE
+}
+
 enum ListingStatus {
   DRAFT
   ACTIVE
@@ -220,8 +225,9 @@ model PropertyListing {
   owner         User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   title         String
   description   String
-  type          PropertyType
-  status        ListingStatus @default(DRAFT)
+  type            PropertyType
+  transactionType TransactionType @default(RENT)
+  status          ListingStatus @default(DRAFT)
   price         Decimal       @db.Decimal(10, 2)
   pricePeriod   String        @default("monthly")
   wilaya        WilayaCode

@@ -10,7 +10,7 @@ import {
   MaxLength,
   IsInt,
 } from 'class-validator';
-import { WilayaCode, PropertyType } from '@prisma/client';
+import { WilayaCode, PropertyType, TransactionType } from '@prisma/client';
 import { Type } from 'class-transformer';
 
 export class CreateListingDto {
@@ -27,6 +27,11 @@ export class CreateListingDto {
   @ApiProperty({ enum: PropertyType, description: 'Type of property' })
   @IsEnum(PropertyType)
   type: PropertyType;
+
+  @ApiPropertyOptional({ enum: TransactionType, description: 'Transaction type: RENT or SALE', default: 'RENT' })
+  @IsOptional()
+  @IsEnum(TransactionType)
+  transactionType?: TransactionType;
 
   @ApiProperty({ description: 'Price (DZD)', minimum: 0 })
   @IsNumber()
