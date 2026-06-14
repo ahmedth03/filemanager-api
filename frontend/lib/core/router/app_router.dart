@@ -2,21 +2,39 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../config/app_config.dart';
-import '../theme/app_colors.dart';
+import '../../features/auth/presentation/login_screen.dart';
+import '../../features/auth/presentation/register_screen.dart';
+import '../../features/auth/providers/auth_provider.dart';
+import '../../features/craftsmen/presentation/craftsmen_screen.dart';
+import '../../features/properties/presentation/properties_screen.dart';
+import '../../features/profile/presentation/profile_screen.dart';
+import '../../features/chat/presentation/chat_screen.dart';
 
-// ── Route paths ──────────────────────────────────────────────────────────────
 class AppRoutes {
   static const splash = '/';
   static const login = '/login';
   static const register = '/register';
   static const home = '/home';
+  static const craftsmen = '/craftsmen';
+  static const properties = '/properties';
+  static const profile = '/profile';
+  static const chat = '/chat';
 }
 
-// ── Router provider ───────────────────────────────────────────────────────────
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: AppRoutes.splash,
+    redirect: (context, state) async {
+      final isLoggedIn = await ref.read(authRepositoryProvider).isLoggedIn();
+      final path = state.uri.path;
+      if (!isLoggedIn && path != AppRoutes.login && path != AppRoutes.register && path != AppRoutes.splash) {
+        return AppRoutes.login;
+      }
+      if (isLoggedIn && (path == AppRoutes.login || path == AppRoutes.register)) {
+        return AppRoutes.home;
+      }
+      return null;
+    },
     routes: [
       GoRoute(
         path: AppRoutes.splash,
@@ -32,13 +50,29 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.home,
-        builder: (context, state) => const HomeScreen(),
+        builder: (context, state) => const MainShell(),
+      ),
+      GoRoute(
+        path: AppRoutes.craftsmen,
+        builder: (context, state) => const CraftsmenScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.properties,
+        builder: (context, state) => const PropertiesScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.profile,
+        builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.chat,
+        builder: (context, state) => const ChatScreen(),
       ),
     ],
   );
 });
 
-// ── Splash Screen ─────────────────────────────────────────────────────────────
+// ── Splash ────────────────────────────────────────────────────────────────────
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -46,25 +80,18 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _fadeAnim;
-  late Animation<double> _scaleAnim;
+class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _fade;
+  late Animation<double> _scale;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    );
-    _fadeAnim = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
-    _scaleAnim = Tween<double>(begin: 0.8, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
-    );
-    _controller.forward();
-
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
+    _fade = Tween<double>(begin: 0, end: 1).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeIn));
+    _scale = Tween<double>(begin: 0.7, end: 1).animate(CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut));
+    _ctrl.forward();
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) context.go(AppRoutes.login);
     });
@@ -72,67 +99,40 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   void dispose() {
-    _controller.dispose();
+    _ctrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
-        child: Center(
-          child: FadeTransition(
-            opacity: _fadeAnim,
-            child: ScaleTransition(
-              scale: _scaleAnim,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 110,
-                    height: 110,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(28),
-                    ),
-                    child: const Icon(
-                      Icons.handyman_rounded,
-                      size: 64,
-                      color: Colors.white,
-                    ),
+      backgroundColor: const Color(0xFF1B4F72),
+      body: Center(
+        child: FadeTransition(
+          opacity: _fade,
+          child: ScaleTransition(
+            scale: _scale,
+            child: const Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.home_work_outlined, size: 90, color: Colors.white),
+                SizedBox(height: 20),
+                Text(
+                  'حرفي دار',
+                  style: TextStyle(
+                    fontSize: 36,
+                    color: Colors.white,
+                    fontFamily: 'Cairo',
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2,
                   ),
-                  const SizedBox(height: 28),
-                  const Text(
-                    'حرفي دار',
-                    style: TextStyle(
-                      fontSize: 38,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      fontFamily: 'Cairo',
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'ابحث عن حرفيين • استأجر عقارات',
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: Colors.white.withOpacity(0.85),
-                      fontFamily: 'Cairo',
-                    ),
-                  ),
-                  const SizedBox(height: 60),
-                  SizedBox(
-                    width: 36,
-                    height: 36,
-                    child: CircularProgressIndicator(
-                      color: Colors.white.withOpacity(0.7),
-                      strokeWidth: 2.5,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'منصة الحرفيين والعقارات',
+                  style: TextStyle(fontSize: 16, color: Colors.white70, fontFamily: 'Cairo'),
+                ),
+              ],
             ),
           ),
         ),
@@ -141,336 +141,160 @@ class _SplashScreenState extends State<SplashScreen>
   }
 }
 
-// ── Login Screen ──────────────────────────────────────────────────────────────
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+// ── Main Shell with Bottom Nav ────────────────────────────────────────────────
+class MainShell extends ConsumerStatefulWidget {
+  const MainShell({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<MainShell> createState() => _MainShellState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  bool _loading = false;
-  bool _obscure = true;
+class _MainShellState extends ConsumerState<MainShell> {
+  int _index = 0;
 
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _login() async {
-    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('يرجى ملء جميع الحقول')),
-      );
-      return;
-    }
-    setState(() => _loading = true);
-    // TODO: call POST ${AppConfig.apiBaseUrl}/auth/login
-    await Future.delayed(const Duration(seconds: 1));
-    setState(() => _loading = false);
-    if (mounted) context.go(AppRoutes.home);
-  }
+  static const _screens = [
+    _HomeTab(),
+    CraftsmenScreen(),
+    PropertiesScreen(),
+    ChatScreen(),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 20),
-              Center(
-                child: Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    gradient: AppColors.primaryGradient,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: const Icon(Icons.handyman_rounded,
-                      size: 40, color: Colors.white),
-                ),
-              ),
-              const SizedBox(height: 32),
-              const Text(
-                'تسجيل الدخول',
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                  fontFamily: 'Cairo',
-                ),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'أدخل بياناتك للمتابعة',
-                style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontFamily: 'Cairo',
-                ),
-              ),
-              const SizedBox(height: 36),
-              TextField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: _inputDecoration('البريد الإلكتروني', Icons.email_outlined),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _passwordController,
-                obscureText: _obscure,
-                decoration: _inputDecoration('كلمة المرور', Icons.lock_outline).copyWith(
-                  suffixIcon: IconButton(
-                    icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility),
-                    onPressed: () => setState(() => _obscure = !_obscure),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 28),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: _loading ? null : _login,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: _loading
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2.5),
-                        )
-                      : const Text(
-                          'دخول',
-                          style: TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Cairo'),
-                        ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Center(
-                child: TextButton(
-                  onPressed: () => context.go(AppRoutes.register),
-                  child: const Text(
-                    'ليس لديك حساب؟ سجّل الآن',
-                    style: TextStyle(
-                        color: AppColors.primary, fontFamily: 'Cairo'),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Center(
-                child: Text(
-                  'الخادم: ${AppConfig.instance.apiBaseUrl}',
-                  style: const TextStyle(
-                      fontSize: 11, color: AppColors.textHint),
-                ),
-              ),
-            ],
-          ),
+    final user = ref.watch(currentUserProvider);
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('حرفي دار', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
+          backgroundColor: const Color(0xFF1B4F72),
+          foregroundColor: Colors.white,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.person_outline),
+              onPressed: () => context.push(AppRoutes.profile),
+              tooltip: 'الملف الشخصي',
+            ),
+          ],
         ),
-      ),
-    );
-  }
-
-  InputDecoration _inputDecoration(String label, IconData icon) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(fontFamily: 'Cairo'),
-      prefixIcon: Icon(icon, color: AppColors.primary),
-      filled: true,
-      fillColor: Colors.white,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.border),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.border),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.primary, width: 2),
-      ),
-    );
-  }
-}
-
-// ── Register Screen ───────────────────────────────────────────────────────────
-class RegisterScreen extends StatelessWidget {
-  const RegisterScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('إنشاء حساب',
-            style: TextStyle(fontFamily: 'Cairo')),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-      ),
-      body: const Center(
-        child: Text(
-          'شاشة التسجيل\nقيد التطوير',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontFamily: 'Cairo', fontSize: 18,
-              color: AppColors.textSecondary),
+        body: IndexedStack(index: _index, children: _screens),
+        bottomNavigationBar: BottomNavigationBar(
+          currentIndex: _index,
+          onTap: (i) => setState(() => _index = i),
+          type: BottomNavigationBarType.fixed,
+          selectedItemColor: const Color(0xFF1B4F72),
+          unselectedItemColor: Colors.grey,
+          selectedLabelStyle: const TextStyle(fontFamily: 'Cairo'),
+          unselectedLabelStyle: const TextStyle(fontFamily: 'Cairo'),
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'الرئيسية'),
+            BottomNavigationBarItem(icon: Icon(Icons.construction_outlined), activeIcon: Icon(Icons.construction), label: 'الحرفيون'),
+            BottomNavigationBarItem(icon: Icon(Icons.apartment_outlined), activeIcon: Icon(Icons.apartment), label: 'العقارات'),
+            BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), activeIcon: Icon(Icons.chat_bubble), label: 'المحادثات'),
+          ],
         ),
       ),
     );
   }
 }
 
-// ── Home Screen ───────────────────────────────────────────────────────────────
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+// ── Home Tab Overview ─────────────────────────────────────────────────────────
+class _HomeTab extends ConsumerWidget {
+  const _HomeTab();
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('حرفي دار',
-            style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {},
-          ),
-        ],
-      ),
-      body: ListView(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(currentUserProvider);
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          _SectionCard(
-            icon: Icons.handyman_rounded,
-            color: AppColors.primary,
+          Text(
+            'مرحباً، ${user?.name ?? 'بك'} 👋',
+            style: const TextStyle(fontSize: 22, fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'ماذا تريد اليوم؟',
+            style: TextStyle(fontSize: 14, fontFamily: 'Cairo', color: Colors.grey),
+          ),
+          const SizedBox(height: 24),
+          _QuickCard(
+            icon: Icons.construction,
             title: 'ابحث عن حرفي',
-            subtitle: 'سباك، كهربائي، نجار وأكثر...',
+            subtitle: 'سباكة، كهرباء، نجارة وأكثر',
+            color: Colors.orange,
             onTap: () {},
           ),
-          const SizedBox(height: 16),
-          _SectionCard(
-            icon: Icons.apartment_rounded,
-            color: AppColors.accent,
-            title: 'استأجر عقاراً',
-            subtitle: 'شقق، منازل، فيلات...',
+          const SizedBox(height: 12),
+          _QuickCard(
+            icon: Icons.apartment,
+            title: 'تصفح العقارات',
+            subtitle: 'شقق، فلل، أراضي للبيع والإيجار',
+            color: const Color(0xFF1B4F72),
             onTap: () {},
           ),
-          const SizedBox(height: 16),
-          _SectionCard(
-            icon: Icons.chat_bubble_outline_rounded,
-            color: AppColors.success,
-            title: 'المحادثات',
-            subtitle: 'تواصل مع الحرفيين والملاك',
+          const SizedBox(height: 12),
+          _QuickCard(
+            icon: Icons.chat_bubble,
+            title: 'محادثاتي',
+            subtitle: 'تواصل مع الحرفيين وأصحاب العقارات',
+            color: Colors.teal,
             onTap: () {},
           ),
-          const SizedBox(height: 32),
-          Center(
-            child: Text(
-              'الخادم: ${AppConfig.instance.apiBaseUrl}',
-              style: const TextStyle(
-                  fontSize: 11, color: AppColors.textHint),
-            ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        selectedItemColor: AppColors.primary,
-        unselectedItemColor: AppColors.textHint,
-        items: const [
-          BottomNavigationBarItem(
-              icon: Icon(Icons.home_rounded), label: 'الرئيسية'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.handyman_rounded), label: 'الحرفيون'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.apartment_rounded), label: 'العقارات'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.person_rounded), label: 'حسابي'),
         ],
       ),
     );
   }
 }
 
-class _SectionCard extends StatelessWidget {
+class _QuickCard extends StatelessWidget {
   final IconData icon;
-  final Color color;
   final String title;
   final String subtitle;
+  final Color color;
   final VoidCallback onTap;
 
-  const _SectionCard({
+  const _QuickCard({
     required this.icon,
-    required this.color,
     required this.title,
     required this.subtitle,
+    required this.color,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      elevation: 2,
+    return InkWell(
+      onTap: onTap,
       borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Row(
-            children: [
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(icon, color: color, size: 30),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withOpacity(0.2)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12)),
+              child: Icon(icon, color: Colors.white, size: 28),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'Cairo')),
+                  Text(subtitle, style: const TextStyle(fontSize: 13, color: Colors.grey, fontFamily: 'Cairo')),
+                ],
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title,
-                        style: const TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'Cairo',
-                            color: AppColors.textPrimary)),
-                    const SizedBox(height: 4),
-                    Text(subtitle,
-                        style: const TextStyle(
-                            fontFamily: 'Cairo',
-                            color: AppColors.textSecondary)),
-                  ],
-                ),
-              ),
-              const Icon(Icons.arrow_forward_ios,
-                  size: 16, color: AppColors.textHint),
-            ],
-          ),
+            ),
+            const Icon(Icons.arrow_back_ios, size: 16, color: Colors.grey),
+          ],
         ),
       ),
     );
