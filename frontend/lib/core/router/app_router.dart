@@ -2,14 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../theme/app_colors.dart';
+import '../../features/auth/providers/auth_provider.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
-import '../../features/auth/providers/auth_provider.dart';
 import '../../features/craftsmen/presentation/craftsmen_screen.dart';
 import '../../features/properties/presentation/properties_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/chat/presentation/chat_screen.dart';
 
+// ── Route paths ──────────────────────────────────────────────────────────────
 class AppRoutes {
   static const splash = '/';
   static const login = '/login';
@@ -21,16 +23,25 @@ class AppRoutes {
   static const chat = '/chat';
 }
 
+// ── Router provider ───────────────────────────────────────────────────────────
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: AppRoutes.splash,
-    redirect: (context, state) async {
-      final isLoggedIn = await ref.read(authRepositoryProvider).isLoggedIn();
-      final path = state.uri.path;
-      if (!isLoggedIn && path != AppRoutes.login && path != AppRoutes.register && path != AppRoutes.splash) {
+    redirect: (context, state) {
+      final authAsync = ref.read(authStateProvider);
+      final isLoggedIn = authAsync.valueOrNull ?? false;
+      final location = state.matchedLocation;
+
+      final isOnAuthPage =
+          location == AppRoutes.login || location == AppRoutes.register;
+
+      // Don't redirect while loading or on splash
+      if (authAsync.isLoading || location == AppRoutes.splash) return null;
+
+      if (!isLoggedIn && !isOnAuthPage) {
         return AppRoutes.login;
       }
-      if (isLoggedIn && (path == AppRoutes.login || path == AppRoutes.register)) {
+      if (isLoggedIn && isOnAuthPage) {
         return AppRoutes.home;
       }
       return null;
@@ -38,7 +49,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: AppRoutes.splash,
-        builder: (context, state) => const SplashScreen(),
+        builder: (context, state) => const _SplashScreen(),
       ),
       GoRoute(
         path: AppRoutes.login,
@@ -50,7 +61,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.home,
-        builder: (context, state) => const MainShell(),
+        builder: (context, state) => const HomeScreen(),
       ),
       GoRoute(
         path: AppRoutes.craftsmen,
@@ -72,67 +83,104 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   );
 });
 
-// ── Splash ────────────────────────────────────────────────────────────────────
-class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
+// ── Splash Screen ─────────────────────────────────────────────────────────────
+class _SplashScreen extends ConsumerStatefulWidget {
+  const _SplashScreen();
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<_SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
-  late AnimationController _ctrl;
-  late Animation<double> _fade;
-  late Animation<double> _scale;
+class _SplashScreenState extends ConsumerState<_SplashScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _fadeAnim;
+  late Animation<double> _scaleAnim;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
-    _fade = Tween<double>(begin: 0, end: 1).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeIn));
-    _scale = Tween<double>(begin: 0.7, end: 1).animate(CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut));
-    _ctrl.forward();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    _fadeAnim = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
+    _scaleAnim = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
+    );
+    _controller.forward();
+
     Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) context.go(AppRoutes.login);
+      if (!mounted) return;
+      final authAsync = ref.read(authStateProvider);
+      final isLoggedIn = authAsync.valueOrNull ?? false;
+      context.go(isLoggedIn ? AppRoutes.home : AppRoutes.login);
     });
   }
 
   @override
   void dispose() {
-    _ctrl.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1B4F72),
-      body: Center(
-        child: FadeTransition(
-          opacity: _fade,
-          child: ScaleTransition(
-            scale: _scale,
-            child: const Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.home_work_outlined, size: 90, color: Colors.white),
-                SizedBox(height: 20),
-                Text(
-                  'حرفي دار',
-                  style: TextStyle(
-                    fontSize: 36,
-                    color: Colors.white,
-                    fontFamily: 'Cairo',
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 2,
+      body: Container(
+        decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
+        child: Center(
+          child: FadeTransition(
+            opacity: _fadeAnim,
+            child: ScaleTransition(
+              scale: _scaleAnim,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 110,
+                    height: 110,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                    child: const Icon(
+                      Icons.handyman_rounded,
+                      size: 64,
+                      color: Colors.white,
+                    ),
                   ),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'منصة الحرفيين والعقارات',
-                  style: TextStyle(fontSize: 16, color: Colors.white70, fontFamily: 'Cairo'),
-                ),
-              ],
+                  const SizedBox(height: 28),
+                  const Text(
+                    'حرفي دار',
+                    style: TextStyle(
+                      fontSize: 38,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      fontFamily: 'Cairo',
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'ابحث عن حرفيين • استأجر عقارات',
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: Colors.white.withOpacity(0.85),
+                      fontFamily: 'Cairo',
+                    ),
+                  ),
+                  const SizedBox(height: 60),
+                  SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: CircularProgressIndicator(
+                      color: Colors.white.withOpacity(0.7),
+                      strokeWidth: 2.5,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -141,19 +189,19 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   }
 }
 
-// ── Main Shell with Bottom Nav ────────────────────────────────────────────────
-class MainShell extends ConsumerStatefulWidget {
-  const MainShell({super.key});
+// ── Home Screen with BottomNavigationBar ──────────────────────────────────────
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
 
   @override
-  ConsumerState<MainShell> createState() => _MainShellState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _MainShellState extends ConsumerState<MainShell> {
-  int _index = 0;
+class _HomeScreenState extends State<HomeScreen> {
+  int _currentIndex = 0;
 
-  static const _screens = [
-    _HomeTab(),
+  static const List<Widget> _tabs = [
+    _HomeOverviewTab(),
     CraftsmenScreen(),
     PropertiesScreen(),
     ChatScreen(),
@@ -161,36 +209,44 @@ class _MainShellState extends ConsumerState<MainShell> {
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(currentUserProvider);
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('حرفي دار', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
-          backgroundColor: const Color(0xFF1B4F72),
-          foregroundColor: Colors.white,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.person_outline),
-              onPressed: () => context.push(AppRoutes.profile),
-              tooltip: 'الملف الشخصي',
-            ),
-          ],
+        body: IndexedStack(
+          index: _currentIndex,
+          children: _tabs,
         ),
-        body: IndexedStack(index: _index, children: _screens),
         bottomNavigationBar: BottomNavigationBar(
-          currentIndex: _index,
-          onTap: (i) => setState(() => _index = i),
+          currentIndex: _currentIndex,
+          onTap: (i) => setState(() => _currentIndex = i),
           type: BottomNavigationBarType.fixed,
-          selectedItemColor: const Color(0xFF1B4F72),
-          unselectedItemColor: Colors.grey,
-          selectedLabelStyle: const TextStyle(fontFamily: 'Cairo'),
-          unselectedLabelStyle: const TextStyle(fontFamily: 'Cairo'),
+          selectedItemColor: AppColors.primary,
+          unselectedItemColor: AppColors.textHint,
+          selectedLabelStyle: const TextStyle(
+              fontFamily: 'Cairo', fontWeight: FontWeight.w600, fontSize: 12),
+          unselectedLabelStyle:
+              const TextStyle(fontFamily: 'Cairo', fontSize: 12),
           items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'الرئيسية'),
-            BottomNavigationBarItem(icon: Icon(Icons.construction_outlined), activeIcon: Icon(Icons.construction), label: 'الحرفيون'),
-            BottomNavigationBarItem(icon: Icon(Icons.apartment_outlined), activeIcon: Icon(Icons.apartment), label: 'العقارات'),
-            BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), activeIcon: Icon(Icons.chat_bubble), label: 'المحادثات'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined),
+              activeIcon: Icon(Icons.home_rounded),
+              label: 'الرئيسية',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.handyman_outlined),
+              activeIcon: Icon(Icons.handyman_rounded),
+              label: 'الحرفيون',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.apartment_outlined),
+              activeIcon: Icon(Icons.apartment_rounded),
+              label: 'العقارات',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.chat_bubble_outline_rounded),
+              activeIcon: Icon(Icons.chat_bubble_rounded),
+              label: 'المحادثات',
+            ),
           ],
         ),
       ),
@@ -198,50 +254,93 @@ class _MainShellState extends ConsumerState<MainShell> {
   }
 }
 
-// ── Home Tab Overview ─────────────────────────────────────────────────────────
-class _HomeTab extends ConsumerWidget {
-  const _HomeTab();
+// ── Home Overview Tab ─────────────────────────────────────────────────────────
+class _HomeOverviewTab extends ConsumerWidget {
+  const _HomeOverviewTab();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: ListView(
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        title: const Text(
+          'حرفي دار',
+          style: TextStyle(
+              fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 20),
+        ),
+        centerTitle: false,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_outlined),
+            tooltip: 'الإشعارات',
+            onPressed: () {},
+          ),
+          IconButton(
+            icon: const Icon(Icons.person_rounded),
+            tooltip: 'الملف الشخصي',
+            onPressed: () => context.push(AppRoutes.profile),
+          ),
+        ],
+      ),
+      body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          Text(
-            'مرحباً، ${user?.name ?? 'بك'} 👋',
-            style: const TextStyle(fontSize: 22, fontFamily: 'Cairo', fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'ماذا تريد اليوم؟',
-            style: TextStyle(fontSize: 14, fontFamily: 'Cairo', color: Colors.grey),
-          ),
-          const SizedBox(height: 24),
-          _QuickCard(
-            icon: Icons.construction,
+          if (user != null) ...[
+            Text(
+              'مرحباً، ${user.name.split(' ').first}!',
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Cairo',
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'ماذا تريد اليوم؟',
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                color: AppColors.textSecondary,
+                fontSize: 15,
+              ),
+            ),
+            const SizedBox(height: 24),
+          ] else
+            const SizedBox(height: 8),
+          _HomeCard(
+            icon: Icons.handyman_rounded,
+            color: AppColors.primary,
             title: 'ابحث عن حرفي',
-            subtitle: 'سباكة، كهرباء، نجارة وأكثر',
-            color: Colors.orange,
-            onTap: () {},
+            subtitle: 'سباك، كهربائي، نجار وأكثر...',
+            onTap: () => context.push(AppRoutes.craftsmen),
           ),
-          const SizedBox(height: 12),
-          _QuickCard(
-            icon: Icons.apartment,
-            title: 'تصفح العقارات',
-            subtitle: 'شقق، فلل، أراضي للبيع والإيجار',
-            color: const Color(0xFF1B4F72),
-            onTap: () {},
+          const SizedBox(height: 16),
+          _HomeCard(
+            icon: Icons.apartment_rounded,
+            color: AppColors.accent,
+            title: 'استأجر عقاراً',
+            subtitle: 'شقق، منازل، فيلات...',
+            onTap: () => context.push(AppRoutes.properties),
           ),
-          const SizedBox(height: 12),
-          _QuickCard(
-            icon: Icons.chat_bubble,
-            title: 'محادثاتي',
-            subtitle: 'تواصل مع الحرفيين وأصحاب العقارات',
-            color: Colors.teal,
-            onTap: () {},
+          const SizedBox(height: 16),
+          _HomeCard(
+            icon: Icons.chat_bubble_outline_rounded,
+            color: AppColors.success,
+            title: 'المحادثات',
+            subtitle: 'تواصل مع الحرفيين والملاك',
+            onTap: () => context.push(AppRoutes.chat),
+          ),
+          const SizedBox(height: 16),
+          _HomeCard(
+            icon: Icons.person_rounded,
+            color: AppColors.info,
+            title: 'الملف الشخصي',
+            subtitle: 'إعداداتك ومعلوماتك الشخصية',
+            onTap: () => context.push(AppRoutes.profile),
           ),
         ],
       ),
@@ -249,52 +348,73 @@ class _HomeTab extends ConsumerWidget {
   }
 }
 
-class _QuickCard extends StatelessWidget {
+class _HomeCard extends StatelessWidget {
   final IconData icon;
+  final Color color;
   final String title;
   final String subtitle;
-  final Color color;
   final VoidCallback onTap;
 
-  const _QuickCard({
+  const _HomeCard({
     required this.icon,
+    required this.color,
     required this.title,
     required this.subtitle,
-    required this.color,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
+    return Material(
+      elevation: 2,
       borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.2)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12)),
-              child: Icon(icon, color: Colors.white, size: 28),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'Cairo')),
-                  Text(subtitle, style: const TextStyle(fontSize: 13, color: Colors.grey, fontFamily: 'Cairo')),
-                ],
+      color: Colors.white,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, color: color, size: 30),
               ),
-            ),
-            const Icon(Icons.arrow_back_ios, size: 16, color: Colors.grey),
-          ],
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Cairo',
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontFamily: 'Cairo',
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_back_ios_new_rounded,
+                  size: 16, color: AppColors.textHint),
+            ],
+          ),
         ),
       ),
     );
