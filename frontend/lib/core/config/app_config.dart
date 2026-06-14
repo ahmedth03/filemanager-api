@@ -31,8 +31,8 @@ class AppConfig {
   factory AppConfig.development() {
     _instance = const AppConfig._(
       environment: AppEnvironment.development,
-      apiBaseUrl: 'http://10.0.2.2:8000/api/v1',
-      socketUrl: 'http://10.0.2.2:8000',
+      apiBaseUrl: 'http://10.0.2.2:3000/api/v1',
+      socketUrl: 'http://10.0.2.2:3000',
       appName: 'HarfiDar Dev',
       enableLogging: true,
       enableCrashlytics: false,

@@ -7,9 +7,15 @@ import '../../features/auth/providers/auth_provider.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
 import '../../features/craftsmen/presentation/craftsmen_screen.dart';
+import '../../features/craftsmen/presentation/craftsman_detail_screen.dart';
 import '../../features/properties/presentation/properties_screen.dart';
+import '../../features/properties/presentation/property_detail_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/chat/presentation/chat_screen.dart';
+import '../../features/chat/presentation/chat_room_screen.dart';
+import '../../features/notifications/presentation/notifications_screen.dart';
+import '../../features/reviews/presentation/add_review_screen.dart';
+import '../../features/reports/presentation/report_screen.dart';
 
 // ── Route paths ──────────────────────────────────────────────────────────────
 class AppRoutes {
@@ -18,9 +24,15 @@ class AppRoutes {
   static const register = '/register';
   static const home = '/home';
   static const craftsmen = '/craftsmen';
+  static const craftsmanDetail = '/craftsmen/:id';
   static const properties = '/properties';
+  static const propertyDetail = '/properties/:id';
   static const profile = '/profile';
   static const chat = '/chat';
+  static const chatRoom = '/chat/:roomId';
+  static const notifications = '/notifications';
+  static const addReview = '/reviews/add';
+  static const report = '/report';
 }
 
 // ── Router provider ───────────────────────────────────────────────────────────
@@ -78,6 +90,39 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.chat,
         builder: (context, state) => const ChatScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.chatRoom,
+        builder: (context, state) =>
+            ChatRoomScreen(roomId: state.pathParameters['roomId']!),
+      ),
+      GoRoute(
+        path: AppRoutes.craftsmanDetail,
+        builder: (context, state) =>
+            CraftsmanDetailScreen(craftsmanId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: AppRoutes.propertyDetail,
+        builder: (context, state) =>
+            PropertyDetailScreen(listingId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: AppRoutes.notifications,
+        builder: (context, state) => const NotificationsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.addReview,
+        builder: (context, state) => AddReviewScreen(
+          craftsmanId: state.uri.queryParameters['craftsmanId'],
+          listingId: state.uri.queryParameters['listingId'],
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.report,
+        builder: (context, state) => ReportScreen(
+          targetId: state.uri.queryParameters['targetId'] ?? '',
+          type: state.uri.queryParameters['type'] ?? 'USER',
+        ),
       ),
     ],
   );

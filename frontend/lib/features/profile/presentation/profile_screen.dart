@@ -30,7 +30,7 @@ class ProfileScreen extends ConsumerWidget {
                       radius: 48,
                       backgroundColor: const Color(0xFF1B4F72),
                       child: Text(
-                        user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
+                        user.fullName.isNotEmpty ? user.fullName[0].toUpperCase() : '?',
                         style: const TextStyle(fontSize: 36, color: Colors.white, fontFamily: 'Cairo'),
                       ),
                     ),
@@ -38,7 +38,7 @@ class ProfileScreen extends ConsumerWidget {
                   const SizedBox(height: 16),
                   Center(
                     child: Text(
-                      user.name,
+                      user.fullName,
                       style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
                     ),
                   ),
@@ -59,12 +59,12 @@ class ProfileScreen extends ConsumerWidget {
                   const SizedBox(height: 32),
                   _InfoTile(icon: Icons.email_outlined, label: 'البريد الإلكتروني', value: user.email),
                   const Divider(),
-                  _InfoTile(icon: Icons.phone_outlined, label: 'رقم الهاتف', value: user.phone),
+                  _InfoTile(icon: Icons.phone_outlined, label: 'رقم الهاتف', value: user.phone ?? '—'),
                   const Divider(),
                   _InfoTile(
                     icon: Icons.shield_outlined,
                     label: 'حالة الحساب',
-                    value: user.accountStatus == 'ACTIVE' ? 'نشط' : user.accountStatus,
+                    value: user.status == 'ACTIVE' ? 'نشط' : user.status,
                   ),
                   const SizedBox(height: 40),
                   SizedBox(

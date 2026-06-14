@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import '../config/app_config.dart';
+import '../storage/secure_storage.dart';
 
 class DioClient {
   static Dio? _instance;
@@ -7,6 +8,10 @@ class DioClient {
   static Dio get instance {
     _instance ??= _create();
     return _instance!;
+  }
+
+  static void reset() {
+    _instance = null;
   }
 
   static Dio _create() {
@@ -33,15 +38,64 @@ class DioClient {
 
     dio.interceptors.add(
       InterceptorsWrapper(
-        onRequest: (options, handler) {
-          final token = _authToken;
-          if (token != null) {
+        onRequest: (options, handler) async {
+          final token = await SecureStorage.getToken();
+          if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
           }
           handler.next(options);
         },
-        onError: (error, handler) {
-          handler.next(error);
+        onError: (error, handler) async {
+          if (error.response?.statusCode == 401) {
+            try {
+              final refreshToken = await SecureStorage.getRefreshToken();
+              if (refreshToken == null || refreshToken.isEmpty) {
+                await SecureStorage.clearAll();
+                handler.next(error);
+                return;
+              }
+
+              final refreshDio = Dio(
+                BaseOptions(
+                  baseUrl: AppConfig.instance.apiBaseUrl,
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                  },
+                ),
+              );
+
+              final refreshResponse = await refreshDio.post(
+                '/auth/refresh',
+                data: {'refreshToken': refreshToken},
+              );
+
+              final data = refreshResponse.data['data'] ?? refreshResponse.data;
+              final newAccessToken = data['accessToken'] as String?;
+              final newRefreshToken = data['refreshToken'] as String?;
+
+              if (newAccessToken == null) {
+                await SecureStorage.clearAll();
+                handler.next(error);
+                return;
+              }
+
+              await SecureStorage.saveToken(newAccessToken);
+              if (newRefreshToken != null) {
+                await SecureStorage.saveRefreshToken(newRefreshToken);
+              }
+
+              final retryOptions = error.requestOptions;
+              retryOptions.headers['Authorization'] = 'Bearer $newAccessToken';
+              final retryResponse = await dio.fetch(retryOptions);
+              handler.resolve(retryResponse);
+            } catch (_) {
+              await SecureStorage.clearAll();
+              handler.next(error);
+            }
+          } else {
+            handler.next(error);
+          }
         },
       ),
     );
@@ -49,14 +103,13 @@ class DioClient {
     return dio;
   }
 
-  static String? _authToken;
-
-  static void setToken(String token) {
-    _authToken = token;
+  // Keep for backward compat – sets the in-memory token (auth repo calls this after login)
+  static Future<void> setToken(String token) async {
+    await SecureStorage.saveToken(token);
   }
 
-  static void clearToken() {
-    _authToken = null;
+  static Future<void> clearToken() async {
+    await SecureStorage.clearAll();
   }
 }
 
@@ -75,7 +128,9 @@ class ApiException implements Exception {
         return const ApiException('تعذر الاتصال بالخادم. تأكد من تشغيل الخادم.');
       case DioExceptionType.badResponse:
         final data = e.response?.data;
-        final msg = data is Map ? (data['message'] ?? data['error'] ?? 'خطأ من الخادم') : 'خطأ من الخادم';
+        final msg = data is Map
+            ? (data['message'] ?? data['error'] ?? 'خطأ من الخادم')
+            : 'خطأ من الخادم';
         return ApiException(msg.toString(), statusCode: e.response?.statusCode);
       default:
         return ApiException(e.message ?? 'خطأ غير معروف');

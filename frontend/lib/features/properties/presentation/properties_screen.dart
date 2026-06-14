@@ -1,14 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../providers/properties_provider.dart';
 import '../data/property_model.dart';
 
-class PropertiesScreen extends ConsumerWidget {
+class PropertiesScreen extends ConsumerStatefulWidget {
   const PropertiesScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PropertiesScreen> createState() => _PropertiesScreenState();
+}
+
+class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
+  final _searchController = TextEditingController();
+
+  static const _types = [
+    ('APARTMENT', 'شقة'),
+    ('HOUSE', 'بيت'),
+    ('STUDIO', 'استوديو'),
+    ('VILLA', 'فيلا'),
+    ('COMMERCIAL', 'تجاري'),
+  ];
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final propertiesAsync = ref.watch(propertiesProvider);
+    final filter = ref.watch(propertyFilterProvider);
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -23,68 +46,159 @@ class PropertiesScreen extends ConsumerWidget {
           ),
           centerTitle: true,
         ),
-        body: propertiesAsync.when(
-          loading: () => const Center(
-            child: CircularProgressIndicator(color: Color(0xFF1B4F72)),
-          ),
-          error: (error, _) => Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.wifi_off_rounded,
-                    size: 64,
-                    color: Color(0xFF6C757D),
+        body: Column(
+          children: [
+            // Search bar
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: TextField(
+                controller: _searchController,
+                onSubmitted: (val) {
+                  ref.read(propertyFilterProvider.notifier).state =
+                      filter.copyWith(
+                          search: val.trim().isEmpty ? null : val.trim());
+                },
+                decoration: InputDecoration(
+                  hintText: 'ابحث عن عقار...',
+                  hintStyle: const TextStyle(fontFamily: 'Cairo'),
+                  prefixIcon:
+                      const Icon(Icons.search, color: Color(0xFF1B4F72)),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchController.clear();
+                            ref
+                                .read(propertyFilterProvider.notifier)
+                                .state = filter.copyWith(clearSearch: true);
+                          },
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFFDEE2E6)),
                   ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'تعذر تحميل العقارات. تحقق من الاتصال.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 16,
-                      color: Color(0xFF6C757D),
-                    ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFFDEE2E6)),
                   ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    onPressed: () => ref.refresh(propertiesProvider),
-                    icon: const Icon(Icons.refresh),
-                    label: const Text(
-                      'إعادة المحاولة',
-                      style: TextStyle(fontFamily: 'Cairo'),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1B4F72),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide:
+                        const BorderSide(color: Color(0xFF1B4F72), width: 2),
                   ),
-                ],
+                ),
               ),
             ),
-          ),
-          data: (properties) {
-            if (properties.isEmpty) {
-              return const Center(
-                child: Text(
-                  'لا توجد عقارات متاحة حالياً',
-                  style: TextStyle(fontFamily: 'Cairo', fontSize: 16),
+            // Type filter chips
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Row(
+                children: _types
+                    .map(
+                      (t) => Padding(
+                        padding: const EdgeInsets.only(left: 8),
+                        child: FilterChip(
+                          label: Text(t.$2,
+                              style:
+                                  const TextStyle(fontFamily: 'Cairo')),
+                          selected: filter.type == t.$1,
+                          onSelected: (val) {
+                            ref
+                                .read(propertyFilterProvider.notifier)
+                                .state = val
+                                ? filter.copyWith(type: t.$1)
+                                : filter.copyWith(clearType: true);
+                          },
+                          selectedColor: const Color(0xFFF39C12)
+                              .withOpacity(0.15),
+                          checkmarkColor: const Color(0xFFF39C12),
+                          labelStyle: TextStyle(
+                            color: filter.type == t.$1
+                                ? const Color(0xFFF39C12)
+                                : Colors.grey,
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+            // List
+            Expanded(
+              child: propertiesAsync.when(
+                loading: () => const Center(
+                  child: CircularProgressIndicator(
+                      color: Color(0xFF1B4F72)),
                 ),
-              );
-            }
-            return ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: properties.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) =>
-                  _PropertyCard(property: properties[index]),
-            );
-          },
+                error: (error, _) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.wifi_off_rounded,
+                            size: 64, color: Color(0xFF6C757D)),
+                        const SizedBox(height: 16),
+                        Text(
+                          error.toString(),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 15,
+                              color: Color(0xFF6C757D)),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton.icon(
+                          onPressed: () =>
+                              ref.invalidate(propertiesProvider),
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('إعادة المحاولة',
+                              style: TextStyle(fontFamily: 'Cairo')),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF1B4F72),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                data: (result) {
+                  if (result.data.isEmpty) {
+                    return const Center(
+                      child: Text(
+                        'لا توجد عقارات متاحة حالياً',
+                        style:
+                            TextStyle(fontFamily: 'Cairo', fontSize: 16),
+                      ),
+                    );
+                  }
+                  return RefreshIndicator(
+                    onRefresh: () async =>
+                        ref.invalidate(propertiesProvider),
+                    child: ListView.separated(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: result.data.length,
+                      separatorBuilder: (_, __) =>
+                          const SizedBox(height: 12),
+                      itemBuilder: (context, index) => _PropertyCard(
+                        property: result.data[index],
+                        onTap: () => context.push(
+                            '/listings/${result.data[index].id}'),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -93,181 +207,159 @@ class PropertiesScreen extends ConsumerWidget {
 
 class _PropertyCard extends StatelessWidget {
   final PropertyModel property;
+  final VoidCallback onTap;
 
-  const _PropertyCard({required this.property});
+  const _PropertyCard({required this.property, required this.onTap});
 
   String _formatPrice(double price) {
     if (price >= 1000000) {
-      return '${(price / 1000000).toStringAsFixed(1)} م ر.س';
+      return '${(price / 1000000).toStringAsFixed(1)} مليون دج';
     } else if (price >= 1000) {
-      return '${(price / 1000).toStringAsFixed(0)} ألف ر.س';
+      return '${(price / 1000).toStringAsFixed(0)} ألف دج';
     }
-    return '${price.toStringAsFixed(0)} ر.س';
+    return '${price.toStringAsFixed(0)} دج';
   }
 
-  String _statusLabel(String status) {
-    switch (status.toUpperCase()) {
-      case 'AVAILABLE':
-        return 'متاح';
-      case 'RENTED':
-        return 'مؤجّر';
-      case 'SOLD':
-        return 'مُباع';
+  String _typeLabel(String type) {
+    switch (type) {
+      case 'APARTMENT':
+        return 'شقة';
+      case 'HOUSE':
+        return 'بيت';
+      case 'STUDIO':
+        return 'استوديو';
+      case 'VILLA':
+        return 'فيلا';
+      case 'COMMERCIAL':
+        return 'تجاري';
       default:
-        return status;
-    }
-  }
-
-  Color _statusColor(String status) {
-    switch (status.toUpperCase()) {
-      case 'AVAILABLE':
-        return const Color(0xFF27AE60);
-      case 'RENTED':
-      case 'SOLD':
-        return const Color(0xFFE74C3C);
-      default:
-        return const Color(0xFF6C757D);
-    }
-  }
-
-  Color _statusBgColor(String status) {
-    switch (status.toUpperCase()) {
-      case 'AVAILABLE':
-        return const Color(0xFFD5F5E3);
-      case 'RENTED':
-      case 'SOLD':
-        return const Color(0xFFFDEDEC);
-      default:
-        return const Color(0xFFF8F9FA);
+        return type;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final coverUrl = property.coverImageUrl;
+
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (property.image != null)
+      shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             ClipRRect(
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(14)),
-              child: Image.network(
-                property.image!,
-                height: 160,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  height: 160,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFDEE2E6),
-                    borderRadius:
-                        BorderRadius.vertical(top: Radius.circular(14)),
-                  ),
-                  child: const Icon(
-                    Icons.apartment_rounded,
-                    size: 60,
-                    color: Color(0xFF6C757D),
-                  ),
-                ),
-              ),
-            )
-          else
-            Container(
-              height: 120,
-              decoration: const BoxDecoration(
-                color: Color(0xFFDEE2E6),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
-              ),
-              width: double.infinity,
-              child: const Icon(
-                Icons.apartment_rounded,
-                size: 50,
-                color: Color(0xFF6C757D),
-              ),
+              child: coverUrl != null
+                  ? Image.network(
+                      coverUrl,
+                      height: 160,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _ImagePlaceholder(),
+                    )
+                  : _ImagePlaceholder(),
             ),
-          Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        property.title,
+            Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          property.title,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Cairo',
+                            color: Color(0xFF1A1A2E),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF39C12).withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          _typeLabel(property.type),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontFamily: 'Cairo',
+                            color: Color(0xFFF39C12),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(Icons.location_on_outlined,
+                          size: 14, color: Color(0xFF6C757D)),
+                      const SizedBox(width: 4),
+                      Text(
+                        property.city,
                         style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Cairo',
-                          color: Color(0xFF1A1A2E),
+                            fontFamily: 'Cairo',
+                            fontSize: 13,
+                            color: Color(0xFF6C757D)),
+                      ),
+                      const SizedBox(width: 12),
+                      if (property.rooms > 0) ...[
+                        const Icon(Icons.bed_outlined,
+                            size: 14, color: Color(0xFF6C757D)),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${property.rooms} غرف',
+                          style: const TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 13,
+                              color: Color(0xFF6C757D)),
                         ),
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: _statusBgColor(property.status),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        _statusLabel(property.status),
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontFamily: 'Cairo',
-                          color: _statusColor(property.status),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    const Icon(Icons.location_on_outlined,
-                        size: 14, color: Color(0xFF6C757D)),
-                    const SizedBox(width: 4),
-                    Text(
-                      property.city,
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
-                        fontSize: 13,
-                        color: Color(0xFF6C757D),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Icon(Icons.category_outlined,
-                        size: 14, color: Color(0xFF6C757D)),
-                    const SizedBox(width: 4),
-                    Text(
-                      property.type,
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
-                        fontSize: 13,
-                        color: Color(0xFF6C757D),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  _formatPrice(property.price),
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Cairo',
-                    color: Color(0xFF1B4F72),
+                      ],
+                    ],
                   ),
-                ),
-              ],
+                  const SizedBox(height: 10),
+                  Text(
+                    _formatPrice(property.price),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Cairo',
+                      color: Color(0xFF1B4F72),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
+    );
+  }
+}
+
+class _ImagePlaceholder extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 160,
+      width: double.infinity,
+      color: const Color(0xFFDEE2E6),
+      child: const Icon(Icons.apartment_rounded,
+          size: 60, color: Color(0xFF6C757D)),
     );
   }
 }

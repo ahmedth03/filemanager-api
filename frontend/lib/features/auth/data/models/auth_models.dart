@@ -1,40 +1,49 @@
 class UserModel {
   final String id;
-  final String name;
+  final String firstName;
+  final String lastName;
   final String email;
-  final String phone;
+  final String? phone;
   final String role;
-  final String? avatar;
-  final String accountStatus;
+  final String? avatarUrl;
+  final String status;
 
   const UserModel({
     required this.id,
-    required this.name,
+    required this.firstName,
+    required this.lastName,
     required this.email,
-    required this.phone,
+    this.phone,
     required this.role,
-    this.avatar,
-    required this.accountStatus,
+    this.avatarUrl,
+    required this.status,
   });
+
+  String get fullName => '$firstName $lastName'.trim();
+
+  // Keep .name for any existing code that uses it
+  String get name => fullName;
 
   factory UserModel.fromJson(Map<String, dynamic> json) => UserModel(
         id: json['id']?.toString() ?? '',
-        name: json['name'] ?? '',
+        firstName: json['firstName'] ?? '',
+        lastName: json['lastName'] ?? '',
         email: json['email'] ?? '',
-        phone: json['phone'] ?? '',
+        phone: json['phone'],
         role: json['role'] ?? 'USER',
-        avatar: json['avatar'],
-        accountStatus: json['accountStatus'] ?? 'ACTIVE',
+        avatarUrl: json['avatarUrl'],
+        status: json['status'] ?? 'ACTIVE',
       );
 
   Map<String, dynamic> toJson() => {
         'id': id,
-        'name': name,
+        'firstName': firstName,
+        'lastName': lastName,
         'email': email,
         'phone': phone,
         'role': role,
-        'avatar': avatar,
-        'accountStatus': accountStatus,
+        'avatarUrl': avatarUrl,
+        'status': status,
       };
 }
 
@@ -66,25 +75,28 @@ class LoginRequest {
 }
 
 class RegisterRequest {
-  final String name;
+  final String firstName;
+  final String lastName;
   final String email;
   final String password;
-  final String phone;
+  final String? phone;
   final String role;
 
   const RegisterRequest({
-    required this.name,
+    required this.firstName,
+    required this.lastName,
     required this.email,
     required this.password,
-    required this.phone,
+    this.phone,
     this.role = 'USER',
   });
 
   Map<String, dynamic> toJson() => {
-        'name': name,
+        'firstName': firstName,
+        'lastName': lastName,
         'email': email,
         'password': password,
-        'phone': phone,
+        if (phone != null && phone!.isNotEmpty) 'phone': phone,
         'role': role,
       };
 }

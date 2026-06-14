@@ -13,7 +13,8 @@ class RegisterScreen extends ConsumerStatefulWidget {
 
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -21,7 +22,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   void dispose() {
-    _nameController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _phoneController.dispose();
@@ -32,7 +34,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final request = RegisterRequest(
-      name: _nameController.text.trim(),
+      firstName: _firstNameController.text.trim(),
+      lastName: _lastNameController.text.trim(),
       email: _emailController.text.trim(),
       password: _passwordController.text,
       phone: _phoneController.text.trim(),
@@ -79,7 +82,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           centerTitle: true,
           leading: IconButton(
             icon: const Icon(Icons.arrow_forward_ios),
-            onPressed: () => context.canPop() ? context.pop() : context.go('/login'),
+            onPressed: () =>
+                context.canPop() ? context.pop() : context.go('/login'),
           ),
         ),
         body: SafeArea(
@@ -102,20 +106,33 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   const SizedBox(height: 6),
                   const Text(
                     'ادخل بياناتك لإنشاء حساب جديد',
-                    style: TextStyle(
-                      color: Color(0xFF6C757D),
-                      fontFamily: 'Cairo',
-                    ),
+                    style: TextStyle(color: Color(0xFF6C757D), fontFamily: 'Cairo'),
                   ),
                   const SizedBox(height: 28),
+                  // First Name
                   TextFormField(
-                    controller: _nameController,
-                    decoration: _inputDecoration('الاسم الكامل', Icons.person_outline),
+                    controller: _firstNameController,
+                    decoration:
+                        _inputDecoration('الاسم الأول', Icons.person_outline),
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) {
-                        return 'يرجى إدخال الاسم الكامل';
+                        return 'يرجى إدخال الاسم الأول';
                       }
-                      if (v.trim().length < 3) return 'الاسم قصير جداً';
+                      if (v.trim().length < 2) return 'الاسم قصير جداً';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  // Last Name
+                  TextFormField(
+                    controller: _lastNameController,
+                    decoration:
+                        _inputDecoration('اللقب', Icons.person_outline),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) {
+                        return 'يرجى إدخال اللقب';
+                      }
+                      if (v.trim().length < 2) return 'اللقب قصير جداً';
                       return null;
                     },
                   ),
@@ -139,7 +156,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     controller: _passwordController,
                     obscureText: _obscurePassword,
                     decoration:
-                        _inputDecoration('كلمة المرور', Icons.lock_outline).copyWith(
+                        _inputDecoration('كلمة المرور', Icons.lock_outline)
+                            .copyWith(
                       suffixIcon: IconButton(
                         icon: Icon(
                           _obscurePassword
@@ -147,13 +165,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                               : Icons.visibility_outlined,
                           color: const Color(0xFF1B4F72),
                         ),
-                        onPressed: () =>
-                            setState(() => _obscurePassword = !_obscurePassword),
+                        onPressed: () => setState(
+                            () => _obscurePassword = !_obscurePassword),
                       ),
                     ),
                     validator: (v) {
-                      if (v == null || v.isEmpty) return 'يرجى إدخال كلمة المرور';
-                      if (v.length < 6) return 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
+                      if (v == null || v.isEmpty) {
+                        return 'يرجى إدخال كلمة المرور';
+                      }
+                      if (v.length < 6) {
+                        return 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
+                      }
                       return null;
                     },
                   ),
@@ -163,14 +185,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     keyboardType: TextInputType.phone,
                     textDirection: TextDirection.ltr,
                     decoration:
-                        _inputDecoration('رقم الهاتف', Icons.phone_outlined),
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) {
-                        return 'يرجى إدخال رقم الهاتف';
-                      }
-                      if (v.trim().length < 9) return 'رقم الهاتف غير صالح';
-                      return null;
-                    },
+                        _inputDecoration('رقم الهاتف (اختياري)', Icons.phone_outlined),
                   ),
                   const SizedBox(height: 32),
                   SizedBox(
@@ -234,7 +249,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   InputDecoration _inputDecoration(String label, IconData icon) {
     return InputDecoration(
       labelText: label,
-      labelStyle: const TextStyle(fontFamily: 'Cairo', color: Color(0xFF6C757D)),
+      labelStyle:
+          const TextStyle(fontFamily: 'Cairo', color: Color(0xFF6C757D)),
       prefixIcon: Icon(icon, color: const Color(0xFF1B4F72)),
       filled: true,
       fillColor: Colors.white,

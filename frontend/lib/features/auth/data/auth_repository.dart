@@ -20,7 +20,8 @@ class AuthRepository {
 
   Future<AuthResponse> register(RegisterRequest request) async {
     try {
-      final response = await _dio.post('/auth/register', data: request.toJson());
+      final response =
+          await _dio.post('/auth/register', data: request.toJson());
       final auth = AuthResponse.fromJson(response.data['data'] ?? response.data);
       await _persist(auth);
       return auth;
@@ -33,8 +34,21 @@ class AuthRepository {
     try {
       await _dio.post('/auth/logout');
     } catch (_) {}
-    DioClient.clearToken();
     await SecureStorage.clearAll();
+  }
+
+  Future<AuthResponse> refreshToken(String refreshToken) async {
+    try {
+      final response = await _dio.post(
+        '/auth/refresh',
+        data: {'refreshToken': refreshToken},
+      );
+      final auth = AuthResponse.fromJson(response.data['data'] ?? response.data);
+      await _persist(auth);
+      return auth;
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
   }
 
   Future<UserModel?> getStoredUser() async {
@@ -53,7 +67,6 @@ class AuthRepository {
   }
 
   Future<void> _persist(AuthResponse auth) async {
-    DioClient.setToken(auth.accessToken);
     await SecureStorage.saveToken(auth.accessToken);
     await SecureStorage.saveRefreshToken(auth.refreshToken);
     await SecureStorage.saveUser(jsonEncode(auth.user.toJson()));
