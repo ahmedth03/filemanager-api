@@ -59,7 +59,7 @@ export class ReviewsService {
       this.prisma.review.count({ where: { craftsmanId } }),
     ]);
 
-    return { reviews, total, page, limit, totalPages: Math.ceil(total / limit) };
+    return { data: reviews, meta: { total, page, limit, totalPages: Math.ceil(total / limit), hasNextPage: page < Math.ceil(total / limit), hasPrevPage: page > 1 } };
   }
 
   async findForListing(listingId: string, page = 1, limit = 10) {
@@ -80,7 +80,7 @@ export class ReviewsService {
       this.prisma.review.count({ where: { listingId } }),
     ]);
 
-    return { reviews, total, page, limit, totalPages: Math.ceil(total / limit) };
+    return { data: reviews, meta: { total, page, limit, totalPages: Math.ceil(total / limit), hasNextPage: page < Math.ceil(total / limit), hasPrevPage: page > 1 } };
   }
 
   private async updateCraftsmanRating(craftsmanId: string) {

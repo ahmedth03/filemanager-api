@@ -86,7 +86,9 @@ export class AuthService {
 
     const tokens = await this.generateTokens(user);
 
-    // Upsert session — delete old sessions for this device if any, then create
+    // Delete old sessions for this user (prevents unique constraint conflicts)
+    await this.prisma.userSession.deleteMany({ where: { userId: user.id } });
+
     await this.prisma.userSession.create({
       data: {
         userId: user.id,
@@ -168,10 +170,13 @@ export class AuthService {
     };
   }
 
-  async logout(userId: string, refreshToken: string): Promise<void> {
-    await this.prisma.userSession.deleteMany({
-      where: { userId, refreshToken },
-    });
+  async logout(userId: string, refreshToken?: string): Promise<void> {
+    if (refreshToken) {
+      await this.prisma.userSession.deleteMany({ where: { userId, refreshToken } });
+    } else {
+      // No refreshToken provided — delete all sessions for this user
+      await this.prisma.userSession.deleteMany({ where: { userId } });
+    }
   }
 
   async generateTokens(user: { id: string; email: string; role: string }) {
