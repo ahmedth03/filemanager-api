@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+@layer base {
+  * { box-sizing: border-box; }
+  body { font-family: 'Cairo', sans-serif; }
+  input, textarea, select { font-family: 'Cairo', sans-serif; }
+}
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .card { @apply bg-white rounded-2xl shadow-sm border border-gray-100 p-6; }
+  .btn-primary { @apply bg-primary text-white px-6 py-2.5 rounded-xl font-semibold hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed; }
+  .btn-outline { @apply border-2 border-primary text-primary px-6 py-2.5 rounded-xl font-semibold hover:bg-primary hover:text-white transition-colors; }
+  .input { @apply w-full border border-gray-300 rounded-xl px-4 py-3 text-right focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors; }
+  .badge { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium; }
+}
