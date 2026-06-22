@@ -1,0 +1,14 @@
+{
+  "buildCommand": "npx prisma generate && next build",
+  "framework": "nextjs",
+  "regions": ["fra1"],
+  "env": {
+    "DATABASE_URL":             "@autotrust-database-url",
+    "NEXTAUTH_SECRET":          "@autotrust-nextauth-secret",
+    "CLOUDINARY_CLOUD_NAME":    "@autotrust-cloudinary-cloud",
+    "CLOUDINARY_API_KEY":       "@autotrust-cloudinary-key",
+    "CLOUDINARY_API_SECRET":    "@autotrust-cloudinary-secret",
+    "RESEND_API_KEY":           "@autotrust-resend-key",
+    "OPENAI_API_KEY":           "@autotrust-openai-key"
+  }
+}
